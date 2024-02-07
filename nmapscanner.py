@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QVBo
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 import nmap
+import subprocess
 
 class NmapScanner(QMainWindow):
     def __init__(self):
@@ -31,6 +32,11 @@ class NmapScanner(QMainWindow):
         self.scanButton.clicked.connect(self.performScan)
         layout.addWidget(self.scanButton)
 
+        # Add "Scan All In Network" button
+        self.scanAllButton = QPushButton('Scan All In Network', self)
+        self.scanAllButton.clicked.connect(self.scanAllInNetwork)
+        layout.addWidget(self.scanAllButton)
+
         self.resultArea = QTextEdit(self)
         self.resultArea.setReadOnly(True)
         layout.addWidget(self.resultArea)
@@ -38,16 +44,26 @@ class NmapScanner(QMainWindow):
     def performScan(self):
         ip = self.ipInput.text()
         if ip:  # Proceed with the scan only if the IP input is not empty
-            scanner = nmap.PortScanner()
-            scanner.scan(ip, arguments='-sV')
-            for host in scanner.all_hosts():
-                self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
-                self.resultArea.append(f'State: {scanner[host].state()}')
-                for proto in scanner[host].all_protocols():
-                    self.resultArea.append(f'----------\nProtocol: {proto}')
-                    lport = scanner[host][proto].keys()
-                    for port in lport:
-                        self.resultArea.append(f'port: {port}\tstate: {scanner[host][proto][port]["state"]}\tservice: {scanner[host][proto][port]["name"]}')
-                self.resultArea.append('---------------------')
+            self.scan(ip, '-sV')
         else:
             self.resultArea.setText("Please enter a valid IP address.")
+
+    def scanAllInNetwork(self):
+        ip = self.ipInput.text()
+        if ip:  # Use the provided IP to determine the network range
+            network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
+            self.scan(network, '-sS')
+        else:
+            self.resultArea.setText("Please enter a valid IP address to determine the network.")
+
+    def scan(self, ip, arguments):
+        self.resultArea.clear()
+        command = f"pkexec nmap {arguments} {ip}"
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+
+        if process.returncode == 0:
+            output = stdout.decode('utf-8')
+            self.resultArea.append(output)
+        else:
+            self.resultArea.append(f"Error: {stderr.decode('utf-8')}")
