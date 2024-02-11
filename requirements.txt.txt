@@ -8,3 +8,15 @@ asynchronous scan
 
 VM's from vulnhub
 https://www.vulnhub.com/entry/mr-robot-1,151/
+
+
+Options for avoiding admin login
+
+X - Hardcoding password - Bad practice, security flaw, per PC basis
+X - Run as admin from terminal - Not a solution, requires password to run as admin
+X -Sudoers - Per PC solition
+
+? - Secondary program/installer?
+? - sh script, use chmod?
+? - capabilities? nmap specific, use similar commands to get what we need without running into root privilege
+? - Polkit? Linux specific, may be a solution
