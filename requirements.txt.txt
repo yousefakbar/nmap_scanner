@@ -1,0 +1,10 @@
+clear text
+sudo privilege
+	import sys
+sC default script search
+output reporting
+	python-nmap documentation
+asynchronous scan
+
+VM's from vulnhub
+https://www.vulnhub.com/entry/mr-robot-1,151/
