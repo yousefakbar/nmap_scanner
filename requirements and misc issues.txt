@@ -1,4 +1,6 @@
 clear text
+ - Issue with editing validated entry. Try writing 000.000.000.000 then change it to 000.000.3.000
+	if you try removing all the zeros from the third section, it will prevent it. Workaround: delete 2 0s then write 3, then 	 delete the last 0
 sudo privilege
 	import sys
 sC default script search
