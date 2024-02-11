@@ -1,0 +1,9 @@
+[x] clear text
+sudo privilege - import sys
+[x] sC default script search
+[x] output reporting - python-nmap documentation
+    - Show count of up/down
+asynchronous scan
+
+VM's from vulnhub
+https://www.vulnhub.com/entry/mr-robot-1,151/
