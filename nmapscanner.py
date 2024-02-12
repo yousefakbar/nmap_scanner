@@ -37,22 +37,34 @@ class NmapScanner(QMainWindow):
         self.scanAllButton.clicked.connect(self.scanAllInNetwork)
         layout.addWidget(self.scanAllButton)
 
+        # "Clear" button
+        self.clearButton = QPushButton('Clear', self)
+        self.clearButton.clicked.connect(self.clearResults)
+        layout.addWidget(self.clearButton)
+
         self.resultArea = QTextEdit(self)
         self.resultArea.setReadOnly(True)
         layout.addWidget(self.resultArea)
 
     def performScan(self):
         ip = self.ipInput.text()
-        if ip:  # Proceed with the scan only if the IP input is not empty
-            self.scan(ip, '-sV')
-        else:
-            self.resultArea.setText("Please enter a valid IP address.")
+        scanner = nmap.PortScanner()
+        scanner.scan(ip, arguments='sC sV')
+        for host in scanner.all_hosts():
+            self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
+            self.resultArea.append(f'State: {scanner[host].state()}')
+            for proto in scanner[host].all_protocols():
+                self.resultArea.append(f'----------\nProtocol: {proto}')
+                lport = scanner[host][proto].keys()
+                for port in lport:
+                    self.resultArea.append(f'port: {port}\tstate: {scanner[host][proto][port]["state"]}\tservice: {scanner[host][proto][port]["name"]}')
+            self.resultArea.append('---------------------')
 
     def scanAllInNetwork(self):
         ip = self.ipInput.text()
         if ip:  # Use the provided IP to determine the network range
             network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
-            self.scan(network, '-sS')
+            self.scan(network, arguments='-sS')
         else:
             self.resultArea.setText("Please enter a valid IP address to determine the network.")
 
@@ -67,3 +79,6 @@ class NmapScanner(QMainWindow):
             self.resultArea.append(output)
         else:
             self.resultArea.append(f"Error: {stderr.decode('utf-8')}")
+
+    def clearResults(self):
+        self.resultArea.clear()
