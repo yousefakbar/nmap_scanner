@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget, QLabel
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 import nmap
@@ -7,15 +7,16 @@ import subprocess
 class NmapScanner(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.layout = None
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle('Nmap Scanner')
         self.setGeometry(100, 100, 600, 400)
 
-        layout = QGridLayout()
+        self.layout = QGridLayout()
         centralWidget = QWidget()
-        centralWidget.setLayout(layout)
+        centralWidget.setLayout(self.layout)
         self.setCentralWidget(centralWidget)
 
         self.ipInput = QLineEdit(self)
@@ -26,31 +27,39 @@ class NmapScanner(QMainWindow):
         ipValidator = QRegExpValidator(ipRegex, self.ipInput)
         self.ipInput.setValidator(ipValidator)
 
-        layout.addWidget(self.ipInput, 0, 0, 1, 2)
+        self.layout.addWidget(self.ipInput, 0, 0, 1, 2)
 
         self.scanButton = QPushButton('Scan', self)
         self.scanButton.clicked.connect(self.performScan)
-        layout.addWidget(self.scanButton, 1, 0)
+        self.layout.addWidget(self.scanButton, 1, 0)
 
         # Add "Scan All In Network" button
         self.scanAllButton = QPushButton('Scan All In Network', self)
         self.scanAllButton.clicked.connect(self.scanAllInNetwork)
-        layout.addWidget(self.scanAllButton, 1, 1)
+        self.layout.addWidget(self.scanAllButton, 1, 1)
 
         # "Clear" button
         self.clearButton = QPushButton('Clear', self)
         self.clearButton.clicked.connect(self.clearResults)
-        layout.addWidget(self.clearButton, 2, 0, 1, 2)
+        self.layout.addWidget(self.clearButton, 2, 0, 1, 2)
 
         self.resultArea = QTextEdit(self)
         self.resultArea.setReadOnly(True)
-        layout.addWidget(self.resultArea, 3, 0, 1, 2)
+        self.layout.addWidget(self.resultArea, 3, 0, 1, 2)
 
     def performScan(self):
         ip = self.ipInput.text()
         scanner = nmap.PortScanner()
         scanner.scan(ip, arguments='sC sV')
         for host in scanner.all_hosts():
+            
+            # WIP - Abdulaziz
+            #self.hostLabel = QLabel(self)
+            #self.hostLabel.setText(f'Host: {host} ({scanner[host].hostname()})')
+
+            #self.layout.addWidget(self.hostLabel, 4, 0, 1, 2)
+            
+            
             self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
             self.resultArea.append(f'State: {scanner[host].state()}')
             for proto in scanner[host].all_protocols():
@@ -69,14 +78,28 @@ class NmapScanner(QMainWindow):
             self.resultArea.setText("Please enter a valid IP address to determine the network.")
 
     def scan(self, ip):
+
+        i =3 # Adjust if more fields are added above the results field
+
         self.resultArea.clear()
         scanner = nmap.PortScanner()
         scanner.scan(ip,arguments='-sn')
         uphosts = scanner.scanstats()['uphosts']
         totalhosts = scanner.scanstats()['totalhosts']
         self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
-        for host in scanner.all_hosts():
-            self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})\n')
+        for host in scanner.all_hosts(): # for each host found, create a qLabel and "more" button
+            i+=i
+            self.hostLabel = QLabel(self)
+            self.hostLabel.setText(f'Host: {host} ({scanner[host].hostname()})')
+
+            self.moreButton = QPushButton(self)
+            self.moreButton.setText('more...') # TODO: add functionality to button
+
+            self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
+            self.layout.addWidget(self.moreButton, i, 1, 1, 1)
+
+            # commented out below in order to create the same information as a qLabel and button. See above
+            #self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})\n')
 
     def clearResults(self):
         self.resultArea.clear()
