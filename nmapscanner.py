@@ -64,21 +64,19 @@ class NmapScanner(QMainWindow):
         ip = self.ipInput.text()
         if ip:  # Use the provided IP to determine the network range
             network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
-            self.scan(network, arguments='-sS')
+            self.scan(network)
         else:
             self.resultArea.setText("Please enter a valid IP address to determine the network.")
 
-    def scan(self, ip, arguments):
+    def scan(self, ip):
         self.resultArea.clear()
-        command = f"pkexec nmap {arguments} {ip}"
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-
-        if process.returncode == 0:
-            output = stdout.decode('utf-8')
-            self.resultArea.append(output)
-        else:
-            self.resultArea.append(f"Error: {stderr.decode('utf-8')}")
+        scanner = nmap.PortScanner()
+        scanner.scan(ip,arguments='-sn')
+        uphosts = scanner.scanstats()['uphosts']
+        totalhosts = scanner.scanstats()['totalhosts']
+        self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
+        for host in scanner.all_hosts():
+            self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})\n')
 
     def clearResults(self):
         self.resultArea.clear()
