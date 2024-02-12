@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 import nmap
@@ -13,7 +13,7 @@ class NmapScanner(QMainWindow):
         self.setWindowTitle('Nmap Scanner')
         self.setGeometry(100, 100, 600, 400)
 
-        layout = QVBoxLayout()
+        layout = QGridLayout()
         centralWidget = QWidget()
         centralWidget.setLayout(layout)
         self.setCentralWidget(centralWidget)
@@ -26,25 +26,25 @@ class NmapScanner(QMainWindow):
         ipValidator = QRegExpValidator(ipRegex, self.ipInput)
         self.ipInput.setValidator(ipValidator)
 
-        layout.addWidget(self.ipInput)
+        layout.addWidget(self.ipInput, 0, 0, 1, 2)
 
         self.scanButton = QPushButton('Scan', self)
         self.scanButton.clicked.connect(self.performScan)
-        layout.addWidget(self.scanButton)
+        layout.addWidget(self.scanButton, 1, 0)
 
         # Add "Scan All In Network" button
         self.scanAllButton = QPushButton('Scan All In Network', self)
         self.scanAllButton.clicked.connect(self.scanAllInNetwork)
-        layout.addWidget(self.scanAllButton)
+        layout.addWidget(self.scanAllButton, 1, 1)
 
         # "Clear" button
         self.clearButton = QPushButton('Clear', self)
         self.clearButton.clicked.connect(self.clearResults)
-        layout.addWidget(self.clearButton)
+        layout.addWidget(self.clearButton, 2, 0, 1, 2)
 
         self.resultArea = QTextEdit(self)
         self.resultArea.setReadOnly(True)
-        layout.addWidget(self.resultArea)
+        layout.addWidget(self.resultArea, 3, 0, 1, 2)
 
     def performScan(self):
         ip = self.ipInput.text()
