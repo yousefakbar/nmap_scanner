@@ -72,7 +72,9 @@ class NmapScanner(QMainWindow):
         self.resultArea.clear()
         scanner = nmap.PortScanner()
         scanner.scan(ip,arguments='-sn')
-        self.resultArea.append('List of hosts UP in network (%s)\n' % ip)
+        uphosts = scanner.scanstats()['uphosts']
+        totalhosts = scanner.scanstats()['totalhosts']
+        self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
         for host in scanner.all_hosts():
             self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})\n')
 
