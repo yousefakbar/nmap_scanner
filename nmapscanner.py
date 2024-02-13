@@ -76,6 +76,7 @@ class NmapScanner(QMainWindow):
 
                     self.moreButton = QPushButton(self)
                     self.moreButton.setText('More')  # TODO: add functionality to button
+                    self.moreButton.clicked.connect(lambda checked, ip=host, inport=port: self.performVersionScan(ip, inport))
 
                     self.layout.addWidget(self.portLabel, i, 0, 1, 2)
                     self.layout.addWidget(self.moreButton, i, 1, 1, 1)
@@ -83,6 +84,18 @@ class NmapScanner(QMainWindow):
 
                     
             self.resultArea.append('---------------------')
+
+    def performVersionScan(self, ip, port):
+        self.clearDynamicWidgets()
+
+        args = '-sV -p ' + str(port)
+        scanner = nmap.PortScanner()
+        scanner.scan(ip, arguments=args)
+
+        self.resultArea.append('Port: ' + str(port))
+        self.resultArea.append('Service: ' + scanner[ip]['tcp'][port]['name'])
+        self.resultArea.append('Name: ' + scanner[ip]['tcp'][port]['product'])
+        self.resultArea.append('Version: ' + scanner[ip]['tcp'][port]['version'])
 
     def scanAllInNetwork(self):
         ip = self.ipInput.text()
