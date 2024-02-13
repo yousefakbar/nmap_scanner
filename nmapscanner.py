@@ -8,6 +8,7 @@ class NmapScanner(QMainWindow):
     def __init__(self):
         super().__init__()
         self.layout = None
+        self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
         self.initUI()
 
     def initUI(self):
@@ -47,19 +48,14 @@ class NmapScanner(QMainWindow):
         self.resultArea.setReadOnly(True)
         self.layout.addWidget(self.resultArea, 3, 0, 1, 2)
 
-    def performScan(self):
-        ip = self.ipInput.text()
-        scanner = nmap.PortScanner()
-        scanner.scan(ip, arguments='sC sV')
-        for host in scanner.all_hosts():
-            
-            # WIP - Abdulaziz
-            #self.hostLabel = QLabel(self)
-            #self.hostLabel.setText(f'Host: {host} ({scanner[host].hostname()})')
+    def performScan(self, ip=None):
+        self.clearDynamicWidgets()
+        if not ip:
+            ip = self.ipInput.text()
 
-            #self.layout.addWidget(self.hostLabel, 4, 0, 1, 2)
-            
-            
+        scanner = nmap.PortScanner()
+        scanner.scan(ip, arguments='-sC -sV')
+        for host in scanner.all_hosts():
             self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
             self.resultArea.append(f'State: {scanner[host].state()}')
             for proto in scanner[host].all_protocols():
@@ -78,28 +74,35 @@ class NmapScanner(QMainWindow):
             self.resultArea.setText("Please enter a valid IP address to determine the network.")
 
     def scan(self, ip):
-
-        i =3 # Adjust if more fields are added above the results field
-
+        self.clearDynamicWidgets()
         self.resultArea.clear()
+        i =3 # Adjust if more fields are added above the results field
         scanner = nmap.PortScanner()
-        scanner.scan(ip,arguments='-sn')
+        scanner.scan(ip, arguments='-sn')
         uphosts = scanner.scanstats()['uphosts']
         totalhosts = scanner.scanstats()['totalhosts']
         self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
-        for host in scanner.all_hosts(): # for each host found, create a qLabel and "more" button
+        for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i+=i
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'Host: {host} ({scanner[host].hostname()})')
 
             self.moreButton = QPushButton(self)
-            self.moreButton.setText('more...') # TODO: add functionality to button
+            self.moreButton.setText('Scan')  # TODO: add functionality to button
+            self.moreButton.clicked.connect(lambda checked, ip=host: self.performScan(ip))
 
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
             self.layout.addWidget(self.moreButton, i, 1, 1, 1)
-
-            # commented out below in order to create the same information as a qLabel and button. See above
-            #self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})\n')
+            self.hostWidgets.append((self.hostLabel, self.moreButton))
 
     def clearResults(self):
         self.resultArea.clear()
+
+    def clearDynamicWidgets(self):
+        # Remove and delete each dynamically added widget
+        for label, button in self.hostWidgets:
+            self.layout.removeWidget(label)
+            self.layout.removeWidget(button)
+            label.deleteLater()
+            button.deleteLater()
+        self.hostWidgets.clear()  # Clear the list after removing the widgets
