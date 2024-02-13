@@ -55,6 +55,7 @@ class NmapScanner(QMainWindow):
         self.layout.addWidget(self.resetButton, 2, 1, 1, 1)
 
     def performScan(self, ip=None):
+        i = 3
         self.clearDynamicWidgets()
         if not ip:
             ip = self.ipInput.text()
@@ -62,13 +63,25 @@ class NmapScanner(QMainWindow):
         scanner = nmap.PortScanner()
         scanner.scan(ip, arguments='-sC -sV')
         for host in scanner.all_hosts():
-            self.resultArea.append(f'IP:\n{host}\n\nHostname:\n{scanner[host].hostname()}\n')
+            self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
             self.resultArea.append(f'State: {scanner[host].state()}')
             for proto in scanner[host].all_protocols():
                 self.resultArea.append(f'----------\nProtocol: {proto}')
                 lport = scanner[host][proto].keys()
+
                 for port in lport:
-                    self.resultArea.append(f'port: {port}\tstate: {scanner[host][proto][port]["state"]}\tservice: {scanner[host][proto][port]["name"]}')
+                    i += 1
+                    self.portLabel = QLabel(self)
+                    self.portLabel.setText(f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}')
+
+                    self.moreButton = QPushButton(self)
+                    self.moreButton.setText('More')  # TODO: add functionality to button
+
+                    self.layout.addWidget(self.portLabel, i, 0, 1, 2)
+                    self.layout.addWidget(self.moreButton, i, 1, 1, 1)
+                    self.hostWidgets.append((self.portLabel, self.moreButton))
+
+                    
             self.resultArea.append('---------------------')
 
     def scanAllInNetwork(self):
