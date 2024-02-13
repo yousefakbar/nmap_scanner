@@ -8,6 +8,7 @@ class NmapScanner(QMainWindow):
     def __init__(self):
         super().__init__()
         self.layout = None
+        self.hosts_list = []
         self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
         self.initUI()
 
@@ -84,6 +85,8 @@ class NmapScanner(QMainWindow):
         self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i+=i
+            self.hosts_list.append(scanner[host])
+
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'Host: {host} ({scanner[host].hostname()})')
 
@@ -94,7 +97,7 @@ class NmapScanner(QMainWindow):
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
             self.layout.addWidget(self.moreButton, i, 1, 1, 1)
             self.hostWidgets.append((self.hostLabel, self.moreButton))
-
+        print(len(self.hosts_list))
     def clearResults(self):
         self.resultArea.clear()
 
