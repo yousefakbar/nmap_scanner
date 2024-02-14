@@ -145,3 +145,9 @@ class NmapScanner(QMainWindow):
         self.clearDynamicWidgets()
         self.clearResults()
         self.ipInput.setText('')
+
+    def writeToFile(self, cveID):
+        # TODO: allow this to take an input from the created file screen (also to be added)
+        with open('temp.txt', 'w') as file:
+            file.write('Copy and paste the following link: https://nvd.nist.gov/vuln/detail/')
+            file.write(cveID)
