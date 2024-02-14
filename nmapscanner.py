@@ -3,6 +3,7 @@ from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 import nmap
 import subprocess
+import nvdlib
 
 class NmapScanner(QMainWindow):
     def __init__(self):
@@ -97,6 +98,19 @@ class NmapScanner(QMainWindow):
         self.resultArea.append('Name: ' + scanner[ip]['tcp'][port]['product'])
         self.resultArea.append('Version: ' + scanner[ip]['tcp'][port]['version'])
 
+        self.getCVEs(scanner[ip]['tcp'][port]['product'], scanner[ip]['tcp'][port]['version'])
+
+    def getCVEs(self, service, version):
+        q = service + ' ' + version
+        cpe_list = nvdlib.searchCPE(keywordSearch=q)
+        for cpe in cpe_list:
+            # self.resultArea.append('\n'cpe.cpeName)
+            cve_res = nvdlib.searchCVE(cpe.cpeName)
+            for cve in cve_res:
+                self.appendToFile(cve.id)
+                self.resultArea.append('\n' + cve.id)
+                self.resultArea.append('https://nvd.nist.gov/vuln/detail/' + cve.id)
+
     def scanAllInNetwork(self):
         ip = self.ipInput.text()
         if ip:  # Use the provided IP to determine the network range
@@ -146,8 +160,8 @@ class NmapScanner(QMainWindow):
         self.clearResults()
         self.ipInput.setText('')
 
-    def writeToFile(self, cveID):
+    def appendToFile(self, cveID):
         # TODO: allow this to take an input from the created file screen (also to be added)
-        with open('temp.txt', 'w') as file:
+        with open('temp.txt', 'a') as file:
             file.write('Copy and paste the following link: https://nvd.nist.gov/vuln/detail/')
-            file.write(cveID)
+            file.write(cveID + '\n')
