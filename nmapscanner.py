@@ -1,14 +1,14 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget, QLabel
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget, QLabel, QScrollArea
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 import nmap
 import subprocess
-import nvdlib
 
 class NmapScanner(QMainWindow):
     def __init__(self):
         super().__init__()
         self.layout = None
+
         self.hosts_list = []
         self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
         self.initUI()
@@ -18,10 +18,17 @@ class NmapScanner(QMainWindow):
         self.setGeometry(100, 100, 600, 400)
 
         self.layout = QGridLayout()
-        centralWidget = QWidget()
-        centralWidget.setLayout(self.layout)
-        self.setCentralWidget(centralWidget)
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setWidgetResizable(True)  # Allow the scroll area to resize the widget
 
+        # Create a container widget to hold the layout
+        container = QWidget()
+        container.setLayout(self.layout)
+
+        # Set the container widget as the widget for the scroll area
+        self.scrollArea.setWidget(container)
+
+        self.setCentralWidget(self.scrollArea)
         self.ipInput = QLineEdit(self)
         self.ipInput.setPlaceholderText('Enter IP or IP range')
 
@@ -57,6 +64,7 @@ class NmapScanner(QMainWindow):
 
     def performScan(self, ip=None):
         i = 3
+
         self.clearDynamicWidgets()
         if not ip:
             ip = self.ipInput.text()
@@ -75,41 +83,38 @@ class NmapScanner(QMainWindow):
                     self.portLabel = QLabel(self)
                     self.portLabel.setText(f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}')
 
-                    self.moreButton = QPushButton(self)
-                    self.moreButton.setText('More')  # TODO: add functionality to button
-                    self.moreButton.clicked.connect(lambda checked, ip=host, inport=port: self.performVersionScan(ip, inport))
+                    self.performVersionScanButton = QPushButton(self)
+                    self.performVersionScanButton.setText('Perform Version Scan')
+                    self.performVersionScanButton.clicked.connect(lambda checked, ip=host, inport=port: self.performVersionScan(ip, inport))
 
                     self.layout.addWidget(self.portLabel, i, 0, 1, 2)
-                    self.layout.addWidget(self.moreButton, i, 1, 1, 1)
-                    self.hostWidgets.append((self.portLabel, self.moreButton))
+                    self.layout.addWidget(self.performVersionScanButton, i, 1, 1, 1)
+                    self.hostWidgets.append((self.portLabel, self.performVersionScanButton))
 
                     
             self.resultArea.append('---------------------')
 
     def performVersionScan(self, ip, port):
-        self.clearDynamicWidgets()
+
+        #First the program finds the qlabel with the correct port:
+        sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
+        gridLayout = sender.parentWidget().layout()  # Get the grid layout
+
+        row_position, column_position, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
+
+        self.layout.removeWidget(sender)
+        portVulnTE = QTextEdit(self)
 
         args = '-sV -p ' + str(port)
         scanner = nmap.PortScanner()
         scanner.scan(ip, arguments=args)
 
-        self.resultArea.append('Port: ' + str(port))
-        self.resultArea.append('Service: ' + scanner[ip]['tcp'][port]['name'])
-        self.resultArea.append('Name: ' + scanner[ip]['tcp'][port]['product'])
-        self.resultArea.append('Version: ' + scanner[ip]['tcp'][port]['version'])
+        portVulnTE.append('Port: ' + str(port))
+        portVulnTE.append('Service: ' + scanner[ip]['tcp'][port]['name'])
+        portVulnTE.append('Name: ' + scanner[ip]['tcp'][port]['product'])
+        portVulnTE.append('Version: ' + scanner[ip]['tcp'][port]['version'])
 
-        self.getCVEs(scanner[ip]['tcp'][port]['product'], scanner[ip]['tcp'][port]['version'])
-
-    def getCVEs(self, service, version):
-        q = service + ' ' + version
-        cpe_list = nvdlib.searchCPE(keywordSearch=q)
-        for cpe in cpe_list:
-            # self.resultArea.append('\n'cpe.cpeName)
-            cve_res = nvdlib.searchCVE(cpe.cpeName)
-            for cve in cve_res:
-                self.appendToFile(cve.id)
-                self.resultArea.append('\n' + cve.id)
-                self.resultArea.append('https://nvd.nist.gov/vuln/detail/' + cve.id)
+        self.layout.addWidget(portVulnTE, row_position, column_position)
 
     def scanAllInNetwork(self):
         ip = self.ipInput.text()
@@ -135,13 +140,13 @@ class NmapScanner(QMainWindow):
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'IP: {host}\nHostname: {scanner[host].hostname()}\n')
 
-            self.moreButton = QPushButton(self)
-            self.moreButton.setText('Scan')  # TODO: add functionality to button
-            self.moreButton.clicked.connect(lambda checked, ip=host: self.performScan(ip))
+            self.performScanButton = QPushButton(self)
+            self.performScanButton.setText('Scan')  # TODO: add functionality to button
+            self.performScanButton.clicked.connect(lambda checked, ip=host: self.performScan(ip))
 
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
-            self.layout.addWidget(self.moreButton, i, 1, 1, 1)
-            self.hostWidgets.append((self.hostLabel, self.moreButton))
+            self.layout.addWidget(self.performScanButton, i, 1, 1, 1)
+            self.hostWidgets.append((self.hostLabel, self.performScanButton))
         print(len(self.hosts_list))
     def clearResults(self):
         self.resultArea.clear()
@@ -160,8 +165,8 @@ class NmapScanner(QMainWindow):
         self.clearResults()
         self.ipInput.setText('')
 
-    def appendToFile(self, cveID):
+    def writeToFile(self, cveID):
         # TODO: allow this to take an input from the created file screen (also to be added)
-        with open('temp.txt', 'a') as file:
+        with open('temp.txt', 'w') as file:
             file.write('Copy and paste the following link: https://nvd.nist.gov/vuln/detail/')
-            file.write(cveID + '\n')
+            file.write(cveID)
