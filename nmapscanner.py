@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget, QLabel
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtCore import QRegExp
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QTextEdit, QGridLayout, QWidget, QLabel, QTextBrowser
+from PyQt5.QtGui import QRegExpValidator, QDesktopServices
+from PyQt5.QtCore import QRegExp, QUrl
 import nmap
 import subprocess
 import nvdlib
@@ -46,8 +46,10 @@ class NmapScanner(QMainWindow):
         self.clearButton.clicked.connect(self.clearResults)
         self.layout.addWidget(self.clearButton, 2, 0, 1, 1)
 
-        self.resultArea = QTextEdit(self)
+        self.resultArea = QTextBrowser(self)
         self.resultArea.setReadOnly(True)
+        self.resultArea.setOpenExternalLinks(True)
+        self.resultArea.anchorClicked.connect(self.openLink)
         self.layout.addWidget(self.resultArea, 3, 0, 1, 2)
 
         # "Reset" button
@@ -96,7 +98,10 @@ class NmapScanner(QMainWindow):
         self.resultArea.append('Port: ' + str(port))
         self.resultArea.append('Service: ' + scanner[ip]['tcp'][port]['name'])
         self.resultArea.append('Name: ' + scanner[ip]['tcp'][port]['product'])
-        self.resultArea.append('Version: ' + scanner[ip]['tcp'][port]['version'])
+        self.resultArea.append('Version: ' + scanner[ip]['tcp'][port]['version'] + '\n')
+
+        self.resultArea.append('Vulnerabilities:')
+        self.resultArea.append('---------------\n')
 
         self.getCVEs(scanner[ip]['tcp'][port]['product'], scanner[ip]['tcp'][port]['version'])
 
@@ -104,12 +109,12 @@ class NmapScanner(QMainWindow):
         q = service + ' ' + version
         cpe_list = nvdlib.searchCPE(keywordSearch=q)
         for cpe in cpe_list:
-            # self.resultArea.append('\n'cpe.cpeName)
             cve_res = nvdlib.searchCVE(cpe.cpeName)
             for cve in cve_res:
+                self.resultArea.append('Severity: ' + cve.score[2])
+                self.resultArea.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
+                self.resultArea.append('')
                 self.appendToFile(cve.id)
-                self.resultArea.append('\n' + cve.id)
-                self.resultArea.append('https://nvd.nist.gov/vuln/detail/' + cve.id)
 
     def scanAllInNetwork(self):
         ip = self.ipInput.text()
@@ -165,3 +170,7 @@ class NmapScanner(QMainWindow):
         with open('temp.txt', 'a') as file:
             file.write('Copy and paste the following link: https://nvd.nist.gov/vuln/detail/')
             file.write(cveID + '\n')
+
+    def openLink(self, url):
+        QDesktopServices.openUrl(url)
+        return
