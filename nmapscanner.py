@@ -4,6 +4,7 @@ from PyQt5.QtCore import QRegExp, QUrl
 import nmap
 import subprocess
 import nvdlib
+import re
 
 class NmapScanner(QMainWindow):
     def __init__(self):
@@ -118,11 +119,22 @@ class NmapScanner(QMainWindow):
         self.portVulnTB.append('Service: ' + scanner[ip]['tcp'][port]['name'])
         self.portVulnTB.append('Name: ' + scanner[ip]['tcp'][port]['product'])
         self.portVulnTB.append('Version: ' + scanner[ip]['tcp'][port]['version'] + '\n')
+        version = scanner[ip]['tcp'][port]['version']
 
         self.portVulnTB.append('Vulnerabilities:')
         self.portVulnTB.append('---------------\n')
 
-        self.getCVEs(scanner[ip]['tcp'][port]['product'], scanner[ip]['tcp'][port]['version'])
+        if scanner[ip]['tcp'][port]['product'] == 'OpenSSH':
+            version = self.getSSHVersion(scanner[ip]['tcp'][port]['version'])
+
+        self.getCVEs(scanner[ip]['tcp'][port]['product'], version)
+
+    def getSSHVersion(self, version):
+        ssh_version = version[:version.index(' ')]
+        match = re.search('[a-zA-Z]', ssh_version)
+        match_idx = match.start()
+        return ssh_version[:match_idx] + ' ' + ssh_version[match_idx:]
+
 
     def getCVEs(self, service, version):
         q = service + ' ' + version
