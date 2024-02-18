@@ -1,10 +1,12 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QWidget, QLabel, QTextBrowser, QScrollArea
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QWidget, QLabel, QTextBrowser, \
+    QScrollArea, QFrame
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5.QtCore import QRegExp, QUrl
 import nmap
 import subprocess
 import nvdlib
 import re
+
 
 class NmapScanner(QMainWindow):
     def __init__(self):
@@ -13,6 +15,10 @@ class NmapScanner(QMainWindow):
 
         self.hosts_list = []
         self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
+        self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
+
+
+
         self.initUI()
 
     def initUI(self):
@@ -66,11 +72,27 @@ class NmapScanner(QMainWindow):
         self.resetButton.clicked.connect(self.resetView)
         self.layout.addWidget(self.resetButton, 2, 1, 1, 1)
 
+
     def performScan(self, ip=None):
         i = 3
+        numports = 0
 
-        self.clearDynamicWidgets()
+        frame = QFrame(self)
+        port_layout = QGridLayout(frame)
+
+        sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
+        gridLayout = sender.parentWidget().layout()  # Get the grid layout
+
+        row_position, column_position, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
+
+        self.layout.removeWidget(sender)
+        sender.deleteLater()  # Remove and delete the scan button
+
+        self.layout.addWidget(frame, row_position, 3, 1, 2)
+        self.layouts[frame] = port_layout  # Store the QFrame and its layout in the dictionary
+
         if not ip:
+            self.clearDynamicWidgets()
             ip = self.ipInput.text()
 
         scanner = nmap.PortScanner()
@@ -78,38 +100,44 @@ class NmapScanner(QMainWindow):
         for host in scanner.all_hosts():
             self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
             self.resultArea.append(f'State: {scanner[host].state()}')
+
             for proto in scanner[host].all_protocols():
-                self.resultArea.append(f'----------\nProtocol: {proto}')
                 lport = scanner[host][proto].keys()
 
                 for port in lport:
-                    i += 1
-                    self.portLabel = QLabel(self)
-                    self.portLabel.setText(f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}')
+                    numports = numports + 1
 
-                    self.performVersionScanButton = QPushButton(self)
-                    self.performVersionScanButton.setText('Perform Version Scan')
-                    self.performVersionScanButton.clicked.connect(lambda checked, ip=host, inport=port: self.performVersionScan(ip, inport))
+                    portLabel = QLabel(self)
+                    portLabel.setText(
+                        f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}')
 
-                    self.layout.addWidget(self.portLabel, i, 0, 1, 2)
-                    self.layout.addWidget(self.performVersionScanButton, i, 1, 1, 1)
-                    self.hostWidgets.append((self.portLabel, self.performVersionScanButton))
+                    performVersionScanButton = QPushButton(self)
+                    performVersionScanButton.setText('Check for CVE')
+                    performVersionScanButton.clicked.connect(
+                        lambda checked, ip=host, inport=port: self.performVersionScan(ip, inport))
 
-                    
+                    port_layout.addWidget(portLabel, numports, 0, 1, 1)
+                    port_layout.addWidget(performVersionScanButton, numports, 1, 1, 1)
+
             self.resultArea.append('---------------------')
 
     def performVersionScan(self, ip, port):
 
-        #First the program finds the qlabel with the correct port:
         sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
         gridLayout = sender.parentWidget().layout()  # Get the grid layout
 
-        row_position, column_position, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
+        row_position, _, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
 
         self.layout.removeWidget(sender)
-        self.portVulnTB = QTextBrowser(self)
-        self.portVulnTB.setOpenExternalLinks(True)
-        self.layout.addWidget(self.portVulnTB, row_position, column_position)
+        frame = next((key for key, value in self.layouts.items() if value == gridLayout), None)
+
+        if frame:
+            # Instantiate QTextBrowser with the correct parent (frame)
+            self.portVulnTB = QTextBrowser(frame)
+            self.portVulnTB.setOpenExternalLinks(True)
+
+            # Use the retrieved layout to add the QTextBrowser to the QFrame
+            self.layouts[frame].addWidget(self.portVulnTB, row_position, 1, 1, 2)
 
         args = '-sV -p ' + str(port)
         scanner = nmap.PortScanner()
@@ -135,7 +163,6 @@ class NmapScanner(QMainWindow):
         match_idx = match.start()
         return ssh_version[:match_idx] + ' ' + ssh_version[match_idx:]
 
-
     def getCVEs(self, service, version):
         q = service + ' ' + version
         cpe_list = nvdlib.searchCPE(keywordSearch=q)
@@ -159,27 +186,28 @@ class NmapScanner(QMainWindow):
     def scan(self, ip):
         self.clearDynamicWidgets()
         self.resultArea.clear()
-        i =3 # Adjust if more fields are added above the results field
+        i = 3  # Adjust if more fields are added above the results field
         scanner = nmap.PortScanner()
         scanner.scan(ip, arguments='-sn')
         uphosts = scanner.scanstats()['uphosts']
         totalhosts = scanner.scanstats()['totalhosts']
         self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
-            i+=i
+            i += i
             self.hosts_list.append(scanner[host])
 
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'IP: {host}\nHostname: {scanner[host].hostname()}\n')
 
             self.performScanButton = QPushButton(self)
-            self.performScanButton.setText('Scan')  # TODO: add functionality to button
+            self.performScanButton.setText('Scan Ports')
             self.performScanButton.clicked.connect(lambda checked, ip=host: self.performScan(ip))
+
 
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
             self.layout.addWidget(self.performScanButton, i, 1, 1, 1)
             self.hostWidgets.append((self.hostLabel, self.performScanButton))
-        print(len(self.hosts_list))
+
     def clearResults(self):
         self.resultArea.clear()
 
