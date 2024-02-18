@@ -8,6 +8,10 @@ output reporting
 	python-nmap documentation
 asynchronous scan
 
+For Abdulaziz
+- Give frames a border, tie it to the IP Address
+
+
 VM's from vulnhub
 https://www.vulnhub.com/entry/mr-robot-1,151/
 
