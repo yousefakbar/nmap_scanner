@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QWidget, QLabel, QTextBrowser, \
     QScrollArea, QFrame
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
-from PyQt5.QtCore import QRegExp, QUrl
+from PyQt5.QtCore import QRegExp, QThread, pyqtSignal
 import nmap
-import subprocess
 import nvdlib
 import re
+import asyncio
 
 
 class NmapScanner(QMainWindow):
@@ -16,9 +16,7 @@ class NmapScanner(QMainWindow):
         self.hosts_list = []
         self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
         self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
-
-
-
+        self.activeThreads = []  # List to keep track of active threads
         self.initUI()
 
     def initUI(self):
@@ -48,7 +46,7 @@ class NmapScanner(QMainWindow):
         self.layout.addWidget(self.ipInput, 0, 0, 1, 2)
 
         self.scanButton = QPushButton('Scan', self)
-        self.scanButton.clicked.connect(self.performScan)
+        self.scanButton.clicked.connect(lambda: self.onScanButtonClick(self.scanButton))
         self.layout.addWidget(self.scanButton, 1, 0)
 
         # Add "Scan All In Network" button
@@ -72,15 +70,26 @@ class NmapScanner(QMainWindow):
         self.resetButton.clicked.connect(self.resetView)
         self.layout.addWidget(self.resetButton, 2, 1, 1, 1)
 
+    async def performScan(self, ip=None):
+        self.clearDynamicWidgets()
+        loop = asyncio.get_event_loop()
+        if not ip:
+            self.clearDynamicWidgets()
+            ip = self.ipInput.text()
 
-    def performScan(self, ip=None):
+        scanner = nmap.PortScanner()
+        return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, ip, '-T4 -sC -sV')
+
+    def displayResultsPerformScan(self, scanner):
+        print(scanner.all_hosts())
         i = 3
         numports = 0
 
         frame = QFrame(self)
         port_layout = QGridLayout(frame)
 
-        sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
+        #sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
+        sender = self.pressedButton  # Get the object that triggered the signal (in this case, the button)
         gridLayout = sender.parentWidget().layout()  # Get the grid layout
 
         row_position, column_position, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
@@ -90,13 +99,6 @@ class NmapScanner(QMainWindow):
 
         self.layout.addWidget(frame, row_position, 3, 1, 2)
         self.layouts[frame] = port_layout  # Store the QFrame and its layout in the dictionary
-
-        if not ip:
-            self.clearDynamicWidgets()
-            ip = self.ipInput.text()
-
-        scanner = nmap.PortScanner()
-        scanner.scan(ip, arguments='-sC -sV')
         for host in scanner.all_hosts():
             self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
             self.resultArea.append(f'State: {scanner[host].state()}')
@@ -207,6 +209,11 @@ class NmapScanner(QMainWindow):
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
             self.layout.addWidget(self.performScanButton, i, 1, 1, 1)
             self.hostWidgets.append((self.hostLabel, self.performScanButton))
+        print(len(self.hosts_list))
+
+    def blocking_nmap_scan(self, nm, ip, args):
+        nm.scan(ip, arguments=args)
+        return nm
 
     def clearResults(self):
         self.resultArea.clear()
@@ -234,3 +241,33 @@ class NmapScanner(QMainWindow):
     def openLink(self, url):
         QDesktopServices.openUrl(url)
         return
+
+    def onScanButtonClick(self, button):
+        self.pressedButton = button
+        self.startAsyncTask(self.performScan())
+
+    def onVersionScanButtonClick(self, ip, port):
+        self.startAsyncTask(self.performVersionScan(ip, port))
+
+    def startAsyncTask(self, coroutine):
+        task = Worker(coroutine)
+        task.scanComplete.connect(self.displayResultsPerformScan)
+        task.finished.connect(lambda: self.activeThreads.remove(task))  # Connect to a slot to remove the thread from the list
+        self.activeThreads.append(task)  # Add the thread to the list of active threa
+        task.start()
+
+class Worker(QThread):
+    scanComplete = pyqtSignal(object)
+
+    def __init__(self, coro):
+        super().__init__()
+        self.coro = coro
+
+    def run(self):
+        print("AsyncTask started")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(self.coro)
+        self.scanComplete.emit(result)  # Emit the scan results
+        loop.close()
+
