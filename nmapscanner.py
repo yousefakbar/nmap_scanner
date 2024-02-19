@@ -51,7 +51,7 @@ class NmapScanner(QMainWindow):
 
         # Add "Scan All In Network" button
         self.scanAllButton = QPushButton('Scan All In Network', self)
-        self.scanAllButton.clicked.connect(self.scanAllInNetwork)
+        self.scanAllButton.clicked.connect(lambda: self.onNetworkScanButtonClick(self.scanAllButton))
         self.layout.addWidget(self.scanAllButton, 1, 1)
 
         # "Clear" button
@@ -71,7 +71,6 @@ class NmapScanner(QMainWindow):
         self.layout.addWidget(self.resetButton, 2, 1, 1, 1)
 
     async def performScan(self, ip=None):
-        self.clearDynamicWidgets()
         loop = asyncio.get_event_loop()
         if not ip:
             self.clearDynamicWidgets()
@@ -88,8 +87,7 @@ class NmapScanner(QMainWindow):
         frame = QFrame(self)
         port_layout = QGridLayout(frame)
 
-        #sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
-        sender = self.pressedButton  # Get the object that triggered the signal (in this case, the button)
+        sender = self.scanPressedButton  # Get the object that triggered the signal (in this case, the button)
         gridLayout = sender.parentWidget().layout()  # Get the grid layout
 
         row_position, column_position, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
@@ -177,23 +175,23 @@ class NmapScanner(QMainWindow):
                 self.portVulnTB.append('')
                 self.appendToFile(cve.id)
 
-    def scanAllInNetwork(self):
+    async def scanAllInNetwork(self):
+        self.clearDynamicWidgets()
+        loop = asyncio.get_event_loop()
         ip = self.ipInput.text()
         if ip:  # Use the provided IP to determine the network range
             network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
-            self.scan(network)
+            scanner = nmap.PortScanner()
+            return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, network, '-sn')
         else:
             self.resultArea.setText("Please enter a valid IP address to determine the network.")
 
-    def scan(self, ip):
-        self.clearDynamicWidgets()
+    def displayResultsScanAll(self, scanner):
         self.resultArea.clear()
         i = 3  # Adjust if more fields are added above the results field
-        scanner = nmap.PortScanner()
-        scanner.scan(ip, arguments='-sn')
         uphosts = scanner.scanstats()['uphosts']
         totalhosts = scanner.scanstats()['totalhosts']
-        self.resultArea.append('List of hosts UP (%s/%s) in network (%s)\n' % (uphosts, totalhosts, ip))
+        self.resultArea.append('List of hosts UP (%s/%s) in network \n' % (uphosts, totalhosts))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i += i
             self.hosts_list.append(scanner[host])
@@ -203,7 +201,7 @@ class NmapScanner(QMainWindow):
 
             self.performScanButton = QPushButton(self)
             self.performScanButton.setText('Scan Ports')
-            self.performScanButton.clicked.connect(lambda checked, ip=host: self.performScan(ip))
+            self.performScanButton.clicked.connect(lambda checked, ip=host: self.onScanButtonClick(self.performScanButton, ip))
 
 
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
@@ -242,16 +240,23 @@ class NmapScanner(QMainWindow):
         QDesktopServices.openUrl(url)
         return
 
-    def onScanButtonClick(self, button):
-        self.pressedButton = button
-        self.startAsyncTask(self.performScan())
+    def onScanButtonClick(self, button, ip=None):
+        self.scanPressedButton = button
+        if ip:
+            self.startAsyncTask(self.performScan(ip), self.displayResultsPerformScan)
+        else:
+            self.startAsyncTask(self.performScan(), self.displayResultsPerformScan)
+
+    def onNetworkScanButtonClick(self, button):
+        self.scanAllPressedButton = button
+        self.startAsyncTask(self.scanAllInNetwork(), self.displayResultsScanAll)
 
     def onVersionScanButtonClick(self, ip, port):
         self.startAsyncTask(self.performVersionScan(ip, port))
 
-    def startAsyncTask(self, coroutine):
+    def startAsyncTask(self, coroutine, callback):
         task = Worker(coroutine)
-        task.scanComplete.connect(self.displayResultsPerformScan)
+        task.scanComplete.connect(callback)
         task.finished.connect(lambda: self.activeThreads.remove(task))  # Connect to a slot to remove the thread from the list
         self.activeThreads.append(task)  # Add the thread to the list of active threa
         task.start()
