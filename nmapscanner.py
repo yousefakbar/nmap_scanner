@@ -114,16 +114,23 @@ class NmapScanner(QMainWindow):
                     performVersionScanButton = QPushButton(self)
                     performVersionScanButton.setText('Check for CVE')
                     performVersionScanButton.clicked.connect(
-                        lambda checked, ip=host, inport=port: self.performVersionScan(ip, inport))
+                        lambda checked, ip=host, inport=port: self.onVersionScanButtonClick(ip, inport, performVersionScanButton))
 
                     port_layout.addWidget(portLabel, numports, 0, 1, 1)
                     port_layout.addWidget(performVersionScanButton, numports, 1, 1, 1)
 
             self.resultArea.append('---------------------')
 
-    def performVersionScan(self, ip, port):
+    async def performVersionScan(self, ip, port):
+        loop = asyncio.get_event_loop()
+        args = '-sV -p ' + str(port)
+        scanner = nmap.PortScanner()
+        return await loop.run_in_executor(None, self.blocking_version_scan, scanner, ip, port, args)
 
-        sender = self.sender()  # Get the object that triggered the signal (in this case, the button)
+    def displayResultsVersionScan(self, scanner):
+        ip = self.test_ip
+        port = self.test_port
+        sender = self.versionScanPressedButton  # Get the object that triggered the signal (in this case, the button)
         gridLayout = sender.parentWidget().layout()  # Get the grid layout
 
         row_position, _, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
@@ -139,10 +146,6 @@ class NmapScanner(QMainWindow):
             # Use the retrieved layout to add the QTextBrowser to the QFrame
             self.layouts[frame].addWidget(self.portVulnTB, row_position, 1, 1, 2)
 
-        args = '-sV -p ' + str(port)
-        scanner = nmap.PortScanner()
-        scanner.scan(ip, arguments=args)
-
         self.portVulnTB.append('Port: ' + str(port))
         self.portVulnTB.append('Service: ' + scanner[ip]['tcp'][port]['name'])
         self.portVulnTB.append('Name: ' + scanner[ip]['tcp'][port]['product'])
@@ -152,10 +155,8 @@ class NmapScanner(QMainWindow):
         self.portVulnTB.append('Vulnerabilities:')
         self.portVulnTB.append('---------------\n')
 
-        if scanner[ip]['tcp'][port]['product'] == 'OpenSSH':
-            version = self.getSSHVersion(scanner[ip]['tcp'][port]['version'])
-
-        self.getCVEs(scanner[ip]['tcp'][port]['product'], version)
+        for line in self.version_res:
+            self.portVulnTB.append(line)
 
     def getSSHVersion(self, version):
         ssh_version = version[:version.index(' ')]
@@ -163,17 +164,28 @@ class NmapScanner(QMainWindow):
         match_idx = match.start()
         return ssh_version[:match_idx] + ' ' + ssh_version[match_idx:]
 
-    def getCVEs(self, service, version):
-        q = service + ' ' + version
-        cpe_list = nvdlib.searchCPE(keywordSearch=q)
-        for cpe in cpe_list:
-            cve_res = nvdlib.searchCVE(cpe.cpeName)
-            for cve in cve_res:
-                self.portVulnTB.append('Severity: ' + cve.score[2])
-                self.portVulnTB.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
-                self.portVulnTB.append('Last Updated: ' + cve.lastModified)
-                self.portVulnTB.append('')
-                self.appendToFile(cve.id)
+    # def getCVEs(self, scanner):
+    #     res = []
+
+    #     service = scanner[ip]['tcp'][port]['product']
+    #     if scanner[ip]['tcp'][port]['product'] == 'OpenSSH':
+    #         version = self.getSSHVersion(scanner[ip]['tcp'][port]['version'])
+    #     else:
+    #         version = scanner[ip]['tcp'][port]['version']
+
+    #     q = service + ' ' + version
+    #     cpe_list = nvdlib.searchCPE(keywordSearch=q)
+
+    #     for cpe in cpe_list:
+    #         cve_res = nvdlib.searchCVE(cpe.cpeName)
+    #         for cve in cve_res:
+    #             res.append('Severity: ' + cve.score[2])
+    #             res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
+    #             res.append('Last Updated: ' + cve.lastModified)
+    #             res.append('')
+    #             self.appendToFile(cve.id)
+
+    #     return res
 
     async def scanAllInNetwork(self):
         self.clearDynamicWidgets()
@@ -213,6 +225,32 @@ class NmapScanner(QMainWindow):
         nm.scan(ip, arguments=args)
         return nm
 
+    def blocking_version_scan(self, scanner, ip, port, args):
+        scanner.scan(ip, arguments=args)
+        self.version_res = []
+
+        service = scanner[ip]['tcp'][port]['product']
+        if scanner[ip]['tcp'][port]['product'] == 'OpenSSH':
+            version = self.getSSHVersion(scanner[ip]['tcp'][port]['version'])
+        else:
+            version = scanner[ip]['tcp'][port]['version']
+
+        q = service + ' ' + version
+        cpe_list = nvdlib.searchCPE(keywordSearch=q)
+
+        for cpe in cpe_list:
+            cve_res = nvdlib.searchCVE(cpe.cpeName)
+            for cve in cve_res:
+                self.version_res.append('Severity: ' + cve.score[2])
+                self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
+                self.version_res.append('Last Updated: ' + cve.lastModified)
+                self.version_res.append('')
+                self.appendToFile(cve.id)
+
+        self.test_ip = ip
+        self.test_port = port
+        return scanner
+
     def clearResults(self):
         self.resultArea.clear()
 
@@ -251,8 +289,9 @@ class NmapScanner(QMainWindow):
         self.scanAllPressedButton = button
         self.startAsyncTask(self.scanAllInNetwork(), self.displayResultsScanAll)
 
-    def onVersionScanButtonClick(self, ip, port):
-        self.startAsyncTask(self.performVersionScan(ip, port))
+    def onVersionScanButtonClick(self, ip, port, button):
+        self.versionScanPressedButton = button
+        self.startAsyncTask(self.performVersionScan(ip, port), self.displayResultsVersionScan) # TODO
 
     def startAsyncTask(self, coroutine, callback):
         task = Worker(coroutine)
