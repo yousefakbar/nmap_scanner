@@ -43,32 +43,32 @@ class NmapScanner(QMainWindow):
         ipValidator = QRegExpValidator(ipRegex, self.ipInput)
         self.ipInput.setValidator(ipValidator)
 
-        self.layout.addWidget(self.ipInput, 0, 0, 1, 2)
+        self.layout.addWidget(self.ipInput, 0, 0, 1, 4)
 
         self.scanButton = QPushButton('Scan', self)
         self.scanButton.clicked.connect(lambda: self.onScanButtonClick(self.scanButton))
-        self.layout.addWidget(self.scanButton, 1, 0)
+        self.layout.addWidget(self.scanButton, 1, 0, 1, 2)
 
         # Add "Scan All In Network" button
         self.scanAllButton = QPushButton('Scan All In Network', self)
         self.scanAllButton.clicked.connect(lambda: self.onNetworkScanButtonClick(self.scanAllButton))
-        self.layout.addWidget(self.scanAllButton, 1, 1)
+        self.layout.addWidget(self.scanAllButton, 1, 2, 1, 2)
 
         # "Clear" button
         self.clearButton = QPushButton('Clear', self)
         self.clearButton.clicked.connect(self.clearResults)
-        self.layout.addWidget(self.clearButton, 2, 0, 1, 1)
+        self.layout.addWidget(self.clearButton, 2, 0, 1, 2)
 
         self.resultArea = QTextBrowser(self)
         self.resultArea.setReadOnly(True)
         self.resultArea.setOpenExternalLinks(True)
         self.resultArea.anchorClicked.connect(self.openLink)
-        self.layout.addWidget(self.resultArea, 3, 0, 1, 2)
+        self.layout.addWidget(self.resultArea, 3, 0, 1, 4)
 
         # "Reset" button
         self.resetButton = QPushButton('Reset', self)
         self.resetButton.clicked.connect(self.resetView)
-        self.layout.addWidget(self.resetButton, 2, 1, 1, 1)
+        self.layout.addWidget(self.resetButton, 2, 2, 1, 2)
 
     async def performScan(self, ip=None):
         loop = asyncio.get_event_loop()
@@ -77,7 +77,7 @@ class NmapScanner(QMainWindow):
             ip = self.ipInput.text()
 
         scanner = nmap.PortScanner()
-        return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, ip, '-T4 -sC -sV')
+        return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, ip, '-sC -sV')
 
     def displayResultsPerformScan(self, scanner):
         print(scanner.all_hosts())
@@ -85,6 +85,8 @@ class NmapScanner(QMainWindow):
         numports = 0
 
         frame = QFrame(self)
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setStyleSheet("background-color:gray")
         port_layout = QGridLayout(frame)
 
         sender = self.scanPressedButton  # Get the object that triggered the signal (in this case, the button)
@@ -92,10 +94,14 @@ class NmapScanner(QMainWindow):
 
         row_position, column_position, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
 
-        self.layout.removeWidget(sender)
-        sender.deleteLater()  # Remove and delete the scan button
+        if row_position == 1:
+            row_position = 4
+            column_position = 0
+        else:
+            self.layout.removeWidget(sender)
+            sender.deleteLater()  # Remove and delete the scan button
 
-        self.layout.addWidget(frame, row_position, 3, 1, 2)
+        self.layout.addWidget(frame, row_position, column_position, 1, 2)
         self.layouts[frame] = port_layout  # Store the QFrame and its layout in the dictionary
         for host in scanner.all_hosts():
             self.resultArea.append(f'Host: {host} ({scanner[host].hostname()})')
@@ -113,11 +119,15 @@ class NmapScanner(QMainWindow):
 
                     performVersionScanButton = QPushButton(self)
                     performVersionScanButton.setText('Check for CVE')
-                    performVersionScanButton.clicked.connect(
-                        lambda checked, ip=host, inport=port: self.onVersionScanButtonClick(ip, inport, performVersionScanButton))
+                    performVersionScanButton.setStyleSheet("background-color:white; color: black")
 
                     port_layout.addWidget(portLabel, numports, 0, 1, 1)
                     port_layout.addWidget(performVersionScanButton, numports, 1, 1, 1)
+
+                    performVersionScanButton.clicked.connect(
+                        lambda checked, ip=host, inport=port: self.onVersionScanButtonClick(ip, inport, performVersionScanButton))
+
+
 
             self.resultArea.append('---------------------')
 
@@ -138,13 +148,17 @@ class NmapScanner(QMainWindow):
         self.layout.removeWidget(sender)
         frame = next((key for key, value in self.layouts.items() if value == gridLayout), None)
 
+
+
         if frame:
             # Instantiate QTextBrowser with the correct parent (frame)
             self.portVulnTB = QTextBrowser(frame)
+            self.portVulnTB.setStyleSheet("background-color: white; color: black")
             self.portVulnTB.setOpenExternalLinks(True)
 
             # Use the retrieved layout to add the QTextBrowser to the QFrame
             self.layouts[frame].addWidget(self.portVulnTB, row_position, 1, 1, 2)
+            # self.layouts[frame].addWidget(self.portVulnTB, 1, 1, 1, 2)
 
         self.portVulnTB.append('Port: ' + str(port))
         self.portVulnTB.append('Service: ' + scanner[ip]['tcp'][port]['name'])
@@ -159,6 +173,8 @@ class NmapScanner(QMainWindow):
             self.portVulnTB.append(line)
 
     def getSSHVersion(self, version):
+        if len(version) <= 3:
+            return version
         ssh_version = version[:version.index(' ')]
         match = re.search('[a-zA-Z]', ssh_version)
         match_idx = match.start()
@@ -213,13 +229,17 @@ class NmapScanner(QMainWindow):
 
             self.performScanButton = QPushButton(self)
             self.performScanButton.setText('Scan Ports')
+
+            self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
+            self.layout.addWidget(self.performScanButton, i, 2, 1, 1)
+            self.hostWidgets.append((self.hostLabel, self.performScanButton))
+
+
             self.performScanButton.clicked.connect(lambda checked, ip=host: self.onScanButtonClick(self.performScanButton, ip))
 
 
-            self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
-            self.layout.addWidget(self.performScanButton, i, 1, 1, 1)
-            self.hostWidgets.append((self.hostLabel, self.performScanButton))
-        print(len(self.hosts_list))
+
+
 
     def blocking_nmap_scan(self, nm, ip, args):
         nm.scan(ip, arguments=args)
@@ -279,18 +299,18 @@ class NmapScanner(QMainWindow):
         return
 
     def onScanButtonClick(self, button, ip=None):
-        self.scanPressedButton = button
+        self.scanPressedButton = self.sender()
         if ip:
             self.startAsyncTask(self.performScan(ip), self.displayResultsPerformScan)
         else:
             self.startAsyncTask(self.performScan(), self.displayResultsPerformScan)
 
     def onNetworkScanButtonClick(self, button):
-        self.scanAllPressedButton = button
+        self.scanAllPressedButton = self.sender()
         self.startAsyncTask(self.scanAllInNetwork(), self.displayResultsScanAll)
 
     def onVersionScanButtonClick(self, ip, port, button):
-        self.versionScanPressedButton = button
+        self.versionScanPressedButton = self.sender()
         self.startAsyncTask(self.performVersionScan(ip, port), self.displayResultsVersionScan) # TODO
 
     def startAsyncTask(self, coroutine, callback):
