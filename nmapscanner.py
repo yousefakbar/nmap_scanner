@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QWidget, QLabel, QTextBrowser, \
     QScrollArea, QFrame
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
-from PyQt5.QtCore import QRegExp, QThread, pyqtSignal
+from PyQt5.QtCore import QRegExp, QThread, pyqtSignal, Qt
 import nmap
 import nvdlib
 import re
@@ -97,9 +97,10 @@ class NmapScanner(QMainWindow):
         if row_position == 1:
             row_position = 4
             column_position = 0
+            self.scanPressedButton.setEnabled(True)
         else:
             self.layout.removeWidget(sender)
-            sender.deleteLater()  # Remove and delete the scan button
+            #sender.deleteLater()  # Remove and delete the scan button
 
         self.layout.addWidget(frame, row_position, column_position, 1, 2)
         self.layouts[frame] = port_layout  # Store the QFrame and its layout in the dictionary
@@ -146,6 +147,7 @@ class NmapScanner(QMainWindow):
         row_position, _, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
 
         self.layout.removeWidget(sender)
+
         frame = next((key for key, value in self.layouts.items() if value == gridLayout), None)
 
 
@@ -216,6 +218,7 @@ class NmapScanner(QMainWindow):
 
     def displayResultsScanAll(self, scanner):
         self.resultArea.clear()
+        self.scanAllPressedButton.setEnabled(True)
         i = 3  # Adjust if more fields are added above the results field
         uphosts = scanner.scanstats()['uphosts']
         totalhosts = scanner.scanstats()['totalhosts']
@@ -226,6 +229,8 @@ class NmapScanner(QMainWindow):
 
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'IP: {host}\nHostname: {scanner[host].hostname()}\n')
+            print(scanner[host])
+            self.hostLabel.setAlignment(Qt.AlignTop)
 
             self.performScanButton = QPushButton(self)
             self.performScanButton.setText('Scan Ports')
@@ -279,9 +284,26 @@ class NmapScanner(QMainWindow):
         for label, button in self.hostWidgets:
             self.layout.removeWidget(label)
             self.layout.removeWidget(button)
+
             label.deleteLater()
             button.deleteLater()
         self.hostWidgets.clear()  # Clear the list after removing the widgets
+
+        # Remove and Delete each frame and it's layout
+        for frame, layout in self.layouts.items():
+            self.layout.removeWidget(frame)
+            frame.deleteLater()
+
+            # Remove and delete widgets from the layout
+            for i in reversed(range(layout.count())):
+                layout_item = layout.itemAt(i)
+                if layout_item is not None:
+                    widget = layout_item.widget()
+                    if widget is not None:
+                        layout.removeWidget(widget)
+                        widget.deleteLater()
+
+        self.layouts.clear()  # Clear the dictionary after removing the frames and layouts
 
     def resetView(self):
         self.clearDynamicWidgets()
@@ -300,6 +322,7 @@ class NmapScanner(QMainWindow):
 
     def onScanButtonClick(self, button, ip=None):
         self.scanPressedButton = self.sender()
+        self.scanPressedButton.setEnabled(False)
         if ip:
             self.startAsyncTask(self.performScan(ip), self.displayResultsPerformScan)
         else:
@@ -307,10 +330,12 @@ class NmapScanner(QMainWindow):
 
     def onNetworkScanButtonClick(self, button):
         self.scanAllPressedButton = self.sender()
+        self.scanAllPressedButton.setEnabled(False)
         self.startAsyncTask(self.scanAllInNetwork(), self.displayResultsScanAll)
 
     def onVersionScanButtonClick(self, ip, port, button):
         self.versionScanPressedButton = self.sender()
+        self.versionScanPressedButton.setEnabled(False)
         self.startAsyncTask(self.performVersionScan(ip, port), self.displayResultsVersionScan) # TODO
 
     def startAsyncTask(self, coroutine, callback):
