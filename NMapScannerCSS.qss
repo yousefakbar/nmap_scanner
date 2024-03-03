@@ -1,0 +1,12 @@
+QLabel
+{
+    font: Greta
+}
+
+QPushButton{
+    background-color: black; color: white
+}
+
+QPushButton#performVersionScanButton{
+    background-color:green; color: black; font: Greta
+}
