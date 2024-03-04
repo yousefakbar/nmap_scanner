@@ -81,8 +81,8 @@ class NmapScanner(QMainWindow):
             if reply == QMessageBox.No:
                 QMessageBox.warning(container, 'nmap Required', 'nmap is required to run this command. Please install then run again.')
                 sys.exit(1)
-#             else:
-#                 self.install_nmap()
+            else:
+                self.install_nmap(container)
     
     async def performScan(self, ip=None):
         loop = asyncio.get_event_loop()
@@ -371,12 +371,13 @@ class NmapScanner(QMainWindow):
     def is_nmap_installed(self):
         return subprocess.run(['which', 'nmap'], stdout=subprocess.PIPE).returncode == 0
 
-    def install_nmap(self):
+    def install_nmap(self, container):
+        QMessageBox.information(container, 'Installing', 'Please wait while we download and install nmap')
         try:
-            subprocess.run(['pkexec', 'apt', 'install', '-y', 'nmap'], check=True)
-            QMessageBox.information('nmap Installed', 'nmap has been successfully installed. You may now use the program')
+            subprocess.run(['pkexec', 'sudo', 'apt', 'install', '-y', 'nmap'], check=True)
+            QMessageBox.information(container, 'nmap Installed', 'nmap has been successfully installed. You may now use the program')
         except:
-            QMessageBox.critical('Installation failed', 'Installation failed.')
+            QMessageBox.critical(container, 'Installation failed', 'Installation failed.')
 
 
 class Worker(QThread):
