@@ -13,6 +13,7 @@ class NmapScanner(QMainWindow):
         super().__init__()
         self.layout = None
 
+        self.api_key = '1f8da398-dc1d-4a00-be62-139a13cacda2'
         self.hosts_list = []
         self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
         self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
@@ -261,10 +262,10 @@ class NmapScanner(QMainWindow):
             version = scanner[ip]['tcp'][port]['version']
 
         q = service + ' ' + version
-        cpe_list = nvdlib.searchCPE(keywordSearch=q)
+        cpe_list = nvdlib.searchCPE(keywordSearch=q, key=self.api_key, delay=1)
 
         for cpe in cpe_list:
-            cve_res = nvdlib.searchCVE(cpe.cpeName)
+            cve_res = nvdlib.searchCVE(cpe.cpeName, key=self.api_key, delay=1)
             for cve in cve_res:
                 self.version_res.append('Severity: ' + cve.score[2])
                 self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
