@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QWidget, QLabel, QTextBrowser, \
-    QScrollArea, QFrame
+        QScrollArea, QFrame, QMessageBox
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5.QtCore import QRegExp, QThread, pyqtSignal, Qt
 import nmap
@@ -76,9 +76,14 @@ class NmapScanner(QMainWindow):
 
         # Check if nmap is installed. If not, ask user to install it first.
         if self.is_nmap_installed() == False:
-            self.resultArea.append("'nmap' command is not found. Please install:'")
-            self.resultArea.append("sudo apt install nmap")
+            reply = QMessageBox.question(container, 'Install nmap?', 'Nmap is required to run the program. Would you like to install nmap?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
+            if reply == QMessageBox.No:
+                self.resultArea.append("'nmap' command is not found. Please install:'")
+                self.resultArea.append("sudo apt install nmap")
+#             else:
+#                 self.install_nmap()
+    
     async def performScan(self, ip=None):
         loop = asyncio.get_event_loop()
         if not ip:
@@ -365,6 +370,8 @@ class NmapScanner(QMainWindow):
 
     def is_nmap_installed(self):
         return subprocess.run(['which', 'nmap'], stdout=subprocess.PIPE).returncode == 0
+
+    # def install_nmap(self):
 
 class Worker(QThread):
     scanComplete = pyqtSignal(object)
