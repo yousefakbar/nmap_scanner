@@ -79,10 +79,8 @@ class NmapScanner(QMainWindow):
             reply = QMessageBox.question(container, 'Install nmap?', 'Nmap is required to run the program. Would you like to install nmap?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
             if reply == QMessageBox.No:
-                self.resultArea.append("'nmap' command is not found. Please install:'")
-                self.resultArea.append("sudo apt install nmap")
-                self.scanButton.setEnabled(False)
-                self.scanAllButton.setEnabled(False)
+                QMessageBox.warning(container, 'nmap Required', 'nmap is required to run this command. Please install then run again.')
+                sys.exit(1)
 #             else:
 #                 self.install_nmap()
     
@@ -373,7 +371,13 @@ class NmapScanner(QMainWindow):
     def is_nmap_installed(self):
         return subprocess.run(['which', 'nmap'], stdout=subprocess.PIPE).returncode == 0
 
-    # def install_nmap(self):
+    def install_nmap(self):
+        try:
+            subprocess.run(['pkexec', 'apt', 'install', '-y', 'nmap'], check=True)
+            QMessageBox.information('nmap Installed', 'nmap has been successfully installed. You may now use the program')
+        except:
+            QMessageBox.critical('Installation failed', 'Installation failed.')
+
 
 class Worker(QThread):
     scanComplete = pyqtSignal(object)
