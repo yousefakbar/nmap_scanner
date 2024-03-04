@@ -17,6 +17,8 @@ class NmapScanner(QMainWindow):
         self.hostWidgets = []  # List to keep track of dynamically added widgets (labels and buttons)
         self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
         self.activeThreads = []  # List to keep track of active threads
+        self.nvdlib_error = False
+        self.nm_scan_error = False
         self.initUI()
 
     def initUI(self):
@@ -81,6 +83,8 @@ class NmapScanner(QMainWindow):
 
     def displayResultsPerformScan(self, scanner):
         print(scanner.all_hosts())
+        if self.nm_scan_error == True:
+            return
         i = 3
         numports = 0
 
@@ -100,7 +104,7 @@ class NmapScanner(QMainWindow):
             self.scanPressedButton.setEnabled(True)
         else:
             self.layout.removeWidget(sender)
-            #sender.deleteLater()  # Remove and delete the scan button
+            sender.deleteLater()  # Remove and delete the scan button
 
         self.layout.addWidget(frame, row_position, column_position, 1, 2)
         self.layouts[frame] = port_layout  # Store the QFrame and its layout in the dictionary
@@ -139,6 +143,13 @@ class NmapScanner(QMainWindow):
         return await loop.run_in_executor(None, self.blocking_version_scan, scanner, ip, port, args)
 
     def displayResultsVersionScan(self, scanner):
+        if self.nvdlib_error == True:
+            print('There was an error in the nvdlib call')
+            return
+
+        if self.nm_scan_error == True:
+            return
+
         ip = self.test_ip
         port = self.test_port
         sender = self.versionScanPressedButton  # Get the object that triggered the signal (in this case, the button)
@@ -247,11 +258,21 @@ class NmapScanner(QMainWindow):
 
 
     def blocking_nmap_scan(self, nm, ip, args):
-        nm.scan(ip, arguments=args)
+        try:
+            nm.scan(ip, arguments=args)
+        except:
+            print('There was an error in the nmap scan. Try again.')
+            self.nm_scan_error = True
         return nm
 
     def blocking_version_scan(self, scanner, ip, port, args):
-        scanner.scan(ip, arguments=args)
+        try:
+            scanner.scan(ip, arguments=args)
+        except:
+            print('There was an error in the nmap version scan. Try again.')
+            self.nm_scan_error = True
+            return
+
         self.version_res = []
 
         service = scanner[ip]['tcp'][port]['product']
@@ -261,10 +282,19 @@ class NmapScanner(QMainWindow):
             version = scanner[ip]['tcp'][port]['version']
 
         q = service + ' ' + version
-        cpe_list = nvdlib.searchCPE(keywordSearch=q)
+        try:
+            cpe_list = nvdlib.searchCPE(keywordSearch=q)
+        except:
+            self.nvdlib_error = True
+            return scanner
 
         for cpe in cpe_list:
-            cve_res = nvdlib.searchCVE(cpe.cpeName)
+            try:
+                cve_res = nvdlib.searchCVE(cpe.cpeName)
+            except:
+                self.nvdlib_error = True
+                return scanner
+
             for cve in cve_res:
                 self.version_res.append('Severity: ' + cve.score[2])
                 self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
@@ -329,9 +359,12 @@ class NmapScanner(QMainWindow):
             self.startAsyncTask(self.performScan(), self.displayResultsPerformScan)
 
     def onNetworkScanButtonClick(self, button):
-        self.scanAllPressedButton = self.sender()
-        self.scanAllPressedButton.setEnabled(False)
-        self.startAsyncTask(self.scanAllInNetwork(), self.displayResultsScanAll)
+        if self.ipInput.text() != '':
+            self.scanAllPressedButton = self.sender()
+            self.scanAllPressedButton.setEnabled(False)
+            self.startAsyncTask(self.scanAllInNetwork(), self.displayResultsScanAll)
+        else:
+            self.resultArea.append('Enter IP or IP range.')
 
     def onVersionScanButtonClick(self, ip, port, button):
         self.versionScanPressedButton = self.sender()
