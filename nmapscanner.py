@@ -81,6 +81,8 @@ class NmapScanner(QMainWindow):
             if reply == QMessageBox.No:
                 self.resultArea.append("'nmap' command is not found. Please install:'")
                 self.resultArea.append("sudo apt install nmap")
+                self.scanButton.setEnabled(False)
+                self.scanAllButton.setEnabled(False)
 #             else:
 #                 self.install_nmap()
     
