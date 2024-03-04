@@ -6,6 +6,7 @@ import nmap
 import nvdlib
 import re
 import asyncio
+import subprocess
 
 
 class NmapScanner(QMainWindow):
@@ -72,6 +73,11 @@ class NmapScanner(QMainWindow):
         self.resetButton = QPushButton('Reset', self)
         self.resetButton.clicked.connect(self.resetView)
         self.layout.addWidget(self.resetButton, 2, 2, 1, 2)
+
+        # Check if nmap is installed. If not, ask user to install it first.
+        if self.is_nmap_installed() == False:
+            self.resultArea.append("'nmap' command is not found. Please install:'")
+            self.resultArea.append("sudo apt install nmap")
 
     async def performScan(self, ip=None):
         loop = asyncio.get_event_loop()
@@ -356,6 +362,9 @@ class NmapScanner(QMainWindow):
         task.finished.connect(lambda: self.activeThreads.remove(task))  # Connect to a slot to remove the thread from the list
         self.activeThreads.append(task)  # Add the thread to the list of active threa
         task.start()
+
+    def is_nmap_installed(self):
+        return subprocess.run(['which', 'nmap'], stdout=subprocess.PIPE).returncode == 0
 
 class Worker(QThread):
     scanComplete = pyqtSignal(object)
