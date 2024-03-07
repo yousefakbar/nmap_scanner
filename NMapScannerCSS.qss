@@ -1,12 +1,37 @@
+* {
+    background-color: #2233ba;
+}
+
+
+QLineEdit{
+    background-color: white;
+    color: black;
+}
+
 QLabel
 {
-    font: Greta
+    background-color: white;
+    color: black;
+
 }
 
 QPushButton{
-    background-color: black; color: white
+    background-color: #2233ba;
+    color: white;
+
 }
 
-QPushButton#performVersionScanButton{
-    background-color:green; color: black; font: Greta
+QPushButton:hover{
+    background-color: #febc1f;
+    color: black;
+}
+
+QPushButton:disabled{
+    background-color: white; color: gray
+}
+
+QTextBrowser{
+    background-color: white;
+    color: black;
+
 }
