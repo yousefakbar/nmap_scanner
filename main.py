@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-from nmapscanner import NmapScanner
+from models.scanner import NmapScanner
 
 
 def main():
