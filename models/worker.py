@@ -2,7 +2,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import asyncio
 
 class Worker(QThread):
-    scanComplete = pyqtSignal(object)
+    scan_complete = pyqtSignal(object)
 
     def __init__(self, coro):
         super().__init__()
@@ -13,5 +13,5 @@ class Worker(QThread):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(self.coro)
-        self.scanComplete.emit(result)  # Emit the scan results
+        self.scan_complete.emit(result)  # Emit the scan results
         loop.close()
