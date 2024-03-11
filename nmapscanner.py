@@ -33,6 +33,7 @@ class NmapScanner(QMainWindow):
             application_path = os.path.dirname(os.path.abspath(__file__))
         icoFile = os.path.join(application_path, 'CoD_Logo.ico')
         self.setWindowIcon(QIcon(icoFile))
+        print('Set Icon File')
 
         self.setWindowTitle('Nmap Scanner')
         self.setGeometry(100, 100, 600, 400)

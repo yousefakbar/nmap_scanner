@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QWidget, QLabel, QTextBrowser, \
         QScrollArea, QFrame, QMessageBox
-from PyQt5.QtGui import QRegExpValidator, QDesktopServices
+from PyQt5.QtGui import QRegExpValidator, QDesktopServices, QIcon
 from PyQt5.QtCore import QRegExp, Qt
 from models.worker import Worker
 import nmap
@@ -8,6 +8,8 @@ import nvdlib
 import re
 import asyncio
 import subprocess
+import sys
+import os
 
 
 class NmapScanner(QMainWindow):
@@ -26,6 +28,14 @@ class NmapScanner(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
+        if getattr(sys, 'frozen', False):
+            application_path = sys._MEIPASS
+        else:
+            application_path = os.path.dirname(os.path.abspath(__file__))
+        icoFile = os.path.join(application_path, 'CoD_Logo.ico')
+        self.setWindowIcon(QIcon(icoFile))
+        print('Set Icon File: ' + icoFile)
+
         self.setWindowTitle('Nmap Scanner')
         self.setGeometry(100, 100, 600, 400)
 
