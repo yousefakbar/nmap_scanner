@@ -333,7 +333,6 @@ class NmapScanner(QMainWindow):
                 self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
                 self.version_res.append('Last Updated: ' + cve.lastModified)
                 self.version_res.append('')
-                self.append_to_file(cve.id)
 
         self.test_ip = ip
         self.test_port = port
@@ -373,12 +372,6 @@ class NmapScanner(QMainWindow):
         self.clear_dynamic_widgets()
         self.clear_results()
         self.ip_input.setText('')
-
-    def append_to_file(self, cveID):
-        # TODO: allow this to take an input from the created file screen (also to be added)
-        with open('temp.txt', 'a') as file:
-            file.write('Copy and paste the following link: https://nvd.nist.gov/vuln/detail/')
-            file.write(cveID + '\n')
 
     def on_scan_button_click(self, button, ip=None):
         self.disable_all_buttons()
