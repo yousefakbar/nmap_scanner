@@ -28,13 +28,7 @@ class NmapScanner(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        if getattr(sys, 'frozen', False):
-            application_path = sys._MEIPASS
-        else:
-            application_path = os.path.dirname(os.path.abspath(__file__))
-        icoFile = os.path.join(application_path, 'CoD_Logo.ico')
-        self.setWindowIcon(QIcon(icoFile))
-        print('Set Icon File: ' + icoFile)
+        self.setIconFile()
 
         self.setWindowTitle('Nmap Scanner')
         self.setGeometry(100, 100, 600, 400)
@@ -91,6 +85,22 @@ class NmapScanner(QMainWindow):
 
         # Check if nmap is installed. If not, ask user to install it first.
         self.__check_nmap_installation()
+
+
+    def setIconFile(self):
+        if getattr(sys, 'frozen', False):
+            application_path = sys._MEIPASS
+            icoFile = os.path.join(application_path, 'CoD_Logo.ico')
+        else:
+            application_path = os.path.dirname(os.path.abspath(__file__))
+            projectRoot = os.path.normpath(os.path.join(application_path, '..'))
+            icoFile = os.path.join(projectRoot, 'data/CoD_Logo.ico')
+
+        try:
+            self.setWindowIcon(QIcon(icoFile))
+        except:
+            print('There was an error setting the icon file')
+
         
     def __check_nmap_installation(self):
         if self.is_nmap_installed() == False:
@@ -124,7 +134,13 @@ class NmapScanner(QMainWindow):
         frame.setFrameShape(QFrame.StyledPanel)
         frame.setStyleSheet("background-color:gray")
 
-        sshFile = "NMapScannerCSS.qss"
+        if getattr(sys, 'frozen', False):
+            application_path = sys._MEIPASS
+            sshFile = os.path.join(application_path, 'NMapScannerCSS.qss')
+        else:
+            application_path = os.path.dirname(os.path.abspath(__file__))
+            application_path = os.path.normpath(os.path.join(application_path, '..'))
+            sshFile = os.path.join(application_path, 'data/NMapScannerCSS.qss')
         with open(sshFile, "r") as fh:
             frame.setStyleSheet(fh.read())
 
