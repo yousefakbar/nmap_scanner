@@ -5,7 +5,11 @@ from models.scanner import NmapScanner
 
 def main():
     app = QApplication(sys.argv)
-    sshFile = "NMapScannerCSS.qss"
+    if getattr(sys, 'frozen', False):
+        application_path = sys._MEIPASS
+    else:
+        application_path = os.path.dirname(os.path.abspath(__file__))
+    sshFile = os.path.join(application_path, 'NMapScannerCSS.qss')
     with open(sshFile, "r") as fh:
         app.setStyleSheet(fh.read())
     ex = NmapScanner()
