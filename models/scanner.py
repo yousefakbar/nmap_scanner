@@ -404,6 +404,7 @@ class NmapScanner(QMainWindow):
             self.scanAllPressedButton.setEnabled(False)
             self.start_async_task(self.scan_all_in_network(), self.display_results_scan_all)
         else:
+            self.enable_all_buttons()
             self.result_area.append('Enter IP or IP range.')
 
     def on_version_scan_button_click(self, ip, port, button):
