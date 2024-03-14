@@ -19,10 +19,11 @@ class NmapScanner(QMainWindow):
 
         self.api_key = '1f8da398-dc1d-4a00-be62-139a13cacda2'
         self.hosts_list = []
-        self.host_widgets = []  # List to keep track of dynamically added widgets (labels and buttons)
+        self.host_widgets = []  # List to keep track of dynamically added labels
         self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
         self.active_threads = []  # List to keep track of active threads
-        self.buttons = [] #List to keep track of buttons
+        self.buttons = [] # List to keep track of buttons
+        self.dynamic_buttons = []
         self.nvdlib_error = False
         self.nm_scan_error = False
         self.init_ui()
@@ -55,13 +56,14 @@ class NmapScanner(QMainWindow):
 
         self.layout.addWidget(self.ip_input, 0, 0, 1, 4)
 
-        self.scan_button = QPushButton('Scan', self)
+        self.scan_button = QPushButton('Scan/فحص', self)
         self.scan_button.clicked.connect(lambda: self.on_scan_button_click(self.scan_button))
         self.layout.addWidget(self.scan_button, 1, 0, 1, 2)
         self.buttons.append(self.scan_button)
 
+
         # Add "Scan All In Network" button
-        self.scan_all_buttons = QPushButton('Scan All In Network', self)
+        self.scan_all_buttons = QPushButton('Network Scan/فحص الشبكة', self)
         self.scan_all_buttons.clicked.connect(lambda: self.on_network_scan_button_click(self.scan_all_buttons))
         self.layout.addWidget(self.scan_all_buttons, 1, 2, 1, 2)
         self.buttons.append(self.scan_all_buttons)
@@ -78,7 +80,7 @@ class NmapScanner(QMainWindow):
         self.layout.addWidget(self.result_area, 3, 0, 1, 4)
 
         # "Reset" button
-        self.reset_button = QPushButton('Reset', self)
+        self.reset_button = QPushButton('Reset/اعادة البرنامج', self)
         self.reset_button.clicked.connect(self.reset_view)
         self.layout.addWidget(self.reset_button, 2, 2, 1, 2)
         self.buttons.append(self.reset_button)
@@ -158,6 +160,7 @@ class NmapScanner(QMainWindow):
         else:
             self.layout.removeWidget(sender)
             self.buttons.remove(sender)
+            self.dynamic_buttons.remove(sender)
 
             sender.deleteLater()  # Remove and delete the scan button
 
@@ -184,6 +187,7 @@ class NmapScanner(QMainWindow):
                     port_layout.addWidget(version_scan_button, numports, 1, 1, 1)
 
                     self.buttons.append(version_scan_button)
+                    self.dynamic_buttons.append(version_scan_button)
 
                     version_scan_button.clicked.connect(
                         lambda checked, ip=host, inport=port: self.on_version_scan_button_click(ip, inport, version_scan_button))
@@ -215,6 +219,8 @@ class NmapScanner(QMainWindow):
         row_position, _, _, _ = gridLayout.getItemPosition(gridLayout.indexOf(sender))
 
         self.layout.removeWidget(sender)
+        self.buttons.remove(sender)
+        self.dynamic_buttons.remove(sender)
 
         frame = next((key for key, value in self.layouts.items() if value == gridLayout), None)
 
@@ -226,7 +232,6 @@ class NmapScanner(QMainWindow):
 
             # Use the retrieved layout to add the QTextBrowser to the QFrame
             self.layouts[frame].addWidget(self.portVulnTB, row_position, 1, 1, 2)
-            # self.layouts[frame].addWidget(self.portVulnTB, 1, 1, 1, 2)
 
         self.portVulnTB.append('Port: ' + str(port))
         self.portVulnTB.append('Service: ' + scanner[ip]['tcp'][port]['name'])
@@ -280,10 +285,11 @@ class NmapScanner(QMainWindow):
             self.performScanButton.setText('Scan Ports')
 
             self.buttons.append(self.performScanButton)
+            self.dynamic_buttons.append(self.performScanButton)
 
             self.layout.addWidget(self.hostLabel, i, 0, 1, 2)
             self.layout.addWidget(self.performScanButton, i, 2, 1, 1)
-            self.host_widgets.append((self.hostLabel, self.performScanButton))
+            self.host_widgets.append(self.hostLabel)
 
 
             self.performScanButton.clicked.connect(lambda checked, ip=host: self.on_scan_button_click(self.performScanButton, ip))
@@ -343,14 +349,18 @@ class NmapScanner(QMainWindow):
 
     def clear_dynamic_widgets(self):
         # Remove and delete each dynamically added widget
-        for label, button in self.host_widgets:
-            self.layout.removeWidget(label)
-            self.layout.removeWidget(button)
 
+        for label in self.host_widgets:
+
+
+            self.layout.removeWidget(label)
             label.deleteLater()
+        self.host_widgets.clear()  # Clear the list after removing the labels
+
+        for button in self.dynamic_buttons:
+            self.layout.removeWidget(button)
             button.deleteLater()
-            self.buttons.remove(button)
-        self.host_widgets.clear()  # Clear the list after removing the widgets
+        self.dynamic_buttons.clear() # clear it after removing all buttons
 
         # Remove and Delete each frame and it's layout
         for frame, layout in self.layouts.items():
@@ -393,7 +403,7 @@ class NmapScanner(QMainWindow):
             self.result_area.append('Enter IP or IP range.')
 
     def on_version_scan_button_click(self, ip, port, button):
-        for b in self.buttons:
+        for b in self.dynamic_buttons:
             if b != self.sender() and isinstance(b, QPushButton) and b.text() == 'Check for CVE':
                 pass
             else:
@@ -423,10 +433,18 @@ class NmapScanner(QMainWindow):
 
     # functions to disable and enable buttons
     def disable_all_buttons(self):
-        for button in self.buttons:
-            button.setEnabled(False)
+        for i in range(4):
+            self.buttons[i].setEnabled(False)
+            i = i + 1
+        for button in self.dynamic_buttons:
+            if button:
+                button.setEnabled(False)
 
     def enable_all_buttons(self):
-        for button in self.buttons:
+
+        for i in range(4):
+            self.buttons[i].setEnabled(True)
+            i=i+1
+        for button in self.dynamic_buttons:
             button.setEnabled(True)
 
