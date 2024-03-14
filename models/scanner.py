@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QW
         QScrollArea, QFrame, QMessageBox
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices, QIcon
 from PyQt5.QtCore import QRegExp, Qt
+from models.result import ScanResult
 from models.worker import Worker
 import nmap
 import nvdlib
@@ -126,7 +127,11 @@ class NmapScanner(QMainWindow):
 
     def display_results_perform_scan(self, scanner):
         self.enable_all_buttons()
-        print(scanner.all_hosts())
+        ip = scanner.all_hosts()[0]
+        stats = scanner.scanstats()
+        result = ScanResult(ip, stats, scanner[ip])
+        # TODO: push result object to DB
+
         if self.nm_scan_error == True:
             return
 
@@ -269,9 +274,8 @@ class NmapScanner(QMainWindow):
         self.result_area.clear()
         self.scanAllPressedButton.setEnabled(True)
         i = 3  # Adjust if more fields are added above the results field
-        uphosts = scanner.scanstats()['uphosts']
-        totalhosts = scanner.scanstats()['totalhosts']
-        self.result_area.append('List of hosts UP (%s/%s) in network \n' % (uphosts, totalhosts))
+        scan_stats = scanner.scanstats()
+        self.result_area.append('List of hosts UP (%s/%s) in network \n' % (scan_stats['uphosts'], scan_stats['totalhosts']))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i += i
             self.hosts_list.append(scanner[host])
