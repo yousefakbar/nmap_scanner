@@ -11,6 +11,7 @@ import asyncio
 import subprocess
 import sys
 import os
+import platform
 
 
 class NmapScanner(QMainWindow):
@@ -258,10 +259,41 @@ class NmapScanner(QMainWindow):
         match_idx = match.start()
         return ssh_version[:match_idx] + ' ' + ssh_version[match_idx:]
 
+    def get_local_ip(self):
+        os_type = platform.system()
+        ip_cmd = {
+                'Windows': 'ipconfig',
+                'Linux': 'ip a',
+                'Darwin': 'ifconfig en0' # MacOS -- Works only for wireless interface
+                }.get(os_type)
+
+        if not ip_cmd:
+            print('Unsupported Operating System')
+            raise ValueError('Unsupported Operating System')
+
+        result = subprocess.run(ip_cmd, stdout=subprocess.PIPE, text=True, shell=True)
+        output = result.stdout
+
+        ip_patterns = {
+                'Windows': r'IPv4 Address[^:]*:\s*(\d+\.\d+\.\d+\.\d+)',
+                'Linux': r'inet (\d+\.\d+\.\d+\.\d+)/\d+',
+                'Darwin': r'inet (\d+\.\d+\.\d+\.\d+) '  # Same as Linux, but keeping separate for clarity
+                }
+
+        pattern = ip_patterns[os_type]
+        match = re.search(pattern, output)
+
+        if match:
+            return match.group(1)
+        else:
+            print('IP address not found')
+            raise ValueError('IP address not found')
+
     async def scan_all_in_network(self):
         self.clear_dynamic_widgets()
         loop = asyncio.get_event_loop()
-        ip = self.ip_input.text()
+        ip = self.get_local_ip()
+
         if ip:  # Use the provided IP to determine the network range
             network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
             scanner = nmap.PortScanner()
@@ -398,14 +430,9 @@ class NmapScanner(QMainWindow):
 
     def on_network_scan_button_click(self, button):
         self.disable_all_buttons()
-
-        if self.ip_input.text() != '':
-            self.scanAllPressedButton = self.sender()
-            self.scanAllPressedButton.setEnabled(False)
-            self.start_async_task(self.scan_all_in_network(), self.display_results_scan_all)
-        else:
-            self.enable_all_buttons()
-            self.result_area.append('Enter IP or IP range.')
+        self.scanAllPressedButton = self.sender()
+        self.scanAllPressedButton.setEnabled(False)
+        self.start_async_task(self.scan_all_in_network(), self.display_results_scan_all)
 
     def on_version_scan_button_click(self, ip, port, button):
         for b in self.dynamic_buttons:
