@@ -87,7 +87,7 @@ class NmapScanner(QMainWindow):
         self.buttons.append(self.reset_button)
 
         # Check if nmap is installed. If not, ask user to install it first.
-        self.__check_nmap_installation()
+        self.__check_nmap_installation(container)
 
 
     def setIconFile(self):
@@ -105,7 +105,7 @@ class NmapScanner(QMainWindow):
             print('There was an error setting the icon file')
 
         
-    def __check_nmap_installation(self):
+    def __check_nmap_installation(self, container):
         if self.is_nmap_installed() == False:
             reply = QMessageBox.question(container, 'Install nmap?', 'Nmap is required to run the program. Would you like to install nmap?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
