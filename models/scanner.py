@@ -183,7 +183,7 @@ class NmapScanner(QMainWindow):
 
                     port_label = QLabel(self)
                     port_label.setText(
-                        f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}')
+                        f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}\nversion: {scanner[host][proto][port]["version"]}')
 
                     version_scan_button = QPushButton(self)
                     version_scan_button.setText('Check for CVE')
