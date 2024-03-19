@@ -123,6 +123,8 @@ class NmapScanner(QMainWindow):
             self.clear_dynamic_widgets()
             ip = self.ip_input.text()
 
+        self.result_area.append('Scanning ports for IP: ' + ip)
+
         scanner = nmap.PortScanner()
         return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, ip, '-sC -sV')
 
@@ -135,6 +137,8 @@ class NmapScanner(QMainWindow):
 
         if self.nm_scan_error == True:
             return
+
+        self.result_area.append('Port scan complete. Display open ports below.')
 
         numports = 0
 
@@ -204,6 +208,7 @@ class NmapScanner(QMainWindow):
     async def perform_version_scan(self, ip, port):
         loop = asyncio.get_event_loop()
         args = '-sV -p ' + str(port)
+        self.result_area.append("Scanning for CVE's on IP & port " + ip + ":" + str(port))
         scanner = nmap.PortScanner()
         return await loop.run_in_executor(None, self.blocking_version_scan, scanner, ip, port, args)
 
@@ -216,6 +221,8 @@ class NmapScanner(QMainWindow):
 
         if self.nm_scan_error == True:
             return
+
+        self.result_area.append("Port version scan complete. CVE's shown below")
 
         ip = self.test_ip
         port = self.test_port
@@ -296,6 +303,7 @@ class NmapScanner(QMainWindow):
 
         if ip:  # Use the provided IP to determine the network range
             network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
+            self.result_area.append('Scanning network IP: ' + network)
             scanner = nmap.PortScanner()
             return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, network, '-sn')
         else:
@@ -307,6 +315,7 @@ class NmapScanner(QMainWindow):
         self.scanAllPressedButton.setEnabled(True)
         i = 3  # Adjust if more fields are added above the results field
         scan_stats = scanner.scanstats()
+        self.result_area.append('Network scan complete. Displaying hosts below.\n')
         self.result_area.append('List of hosts UP (%s/%s) in network \n' % (scan_stats['uphosts'], scan_stats['totalhosts']))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i += i
