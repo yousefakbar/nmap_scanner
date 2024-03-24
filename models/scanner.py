@@ -281,6 +281,12 @@ class NmapScanner(QMainWindow):
         result = subprocess.run(ip_cmd, stdout=subprocess.PIPE, text=True, shell=True)
         output = result.stdout
 
+        # For private IP addresses, these will typically be the range in which
+        # the devices are on in the network. So, look for patterns in the ip
+        # program that match the following Private IP Address Ranges:
+        # - 10.0.0.0 to 10.255.255.255
+        # - 172.16.0.0 to 172.31.255.255
+        # - 192.168.0.0 to 192.168.255.255
         ip_patterns = {
                 'Windows': r'IPv4 Address[^:]*:\s*(\d+\.\d+\.\d+\.\d+)',
                 'Linux': r'inet (\d+\.\d+\.\d+\.\d+)/\d+',
@@ -288,13 +294,14 @@ class NmapScanner(QMainWindow):
                 }
 
         pattern = ip_patterns[os_type]
-        match = re.search(pattern, output)
+        ips = re.findall(pattern, output)
 
-        if match:
-            return match.group(1)
-        else:
-            print('IP address not found')
-            raise ValueError('IP address not found')
+        # filter out the loopback IP and get the private IP in the network
+        private_ip = [ip for ip in ips if not ip.startswith('127.') and
+                (ip.startswith('10.') or ip.startswith('172.') or
+                    ip.startswith('192.168.'))]
+
+        return private_ip[0]
 
     async def scan_all_in_network(self):
         self.clear_dynamic_widgets()
