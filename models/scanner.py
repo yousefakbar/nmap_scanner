@@ -439,10 +439,13 @@ class NmapScanner(QMainWindow):
         self.disable_all_buttons()
         self.scanPressedButton = self.sender()
 
-        if ip:
+        if ip: # This will run when the user clicks scan host after "Scanning all in network"
             self.start_async_task(self.perform_scan(ip), self.display_results_perform_scan)
-        else:
+        elif button == self.scan_button and self.ip_input.text(): # This will run when the user enters IP in ipInput and clicks Scan
             self.start_async_task(self.perform_scan(), self.display_results_perform_scan)
+        else: # This will run when the user clicks the scan button with empty input field
+            self.result_area.append('Please enter a valid IP to scan')
+            self.enable_all_buttons()
 
     def on_network_scan_button_click(self, button):
         self.disable_all_buttons()
