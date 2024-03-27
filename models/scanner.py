@@ -12,6 +12,8 @@ import subprocess
 import sys
 import os
 import platform
+from datetime import datetime
+from docx import Document
 
 
 class NmapScanner(QMainWindow):
@@ -25,6 +27,7 @@ class NmapScanner(QMainWindow):
         self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
         self.active_threads = []  # List to keep track of active threads
         self.buttons = [] # List to keep track of buttons
+        self.result_objects = {}
         self.dynamic_buttons = []
         self.nvdlib_error = False
         self.nm_scan_error = False
@@ -70,11 +73,12 @@ class NmapScanner(QMainWindow):
         self.layout.addWidget(self.scan_all_buttons, 1, 2, 1, 2)
         self.buttons.append(self.scan_all_buttons)
 
-        # "Clear" button
-        self.clear_button = QPushButton('Clear', self)
-        self.clear_button.clicked.connect(self.clear_results)
-        self.layout.addWidget(self.clear_button, 2, 0, 1, 2)
-        self.buttons.append(self.clear_button)
+        # Button to create reports
+        self.create_report_button = QPushButton('Create Report', self)
+        self.create_report_button.clicked.connect(self.create_report)
+        self.layout.addWidget(self.create_report_button, 2, 0, 1, 2)
+        self.buttons.append(self.create_report_button)
+        self.create_report_button.setEnabled(False)  # disabled by default so no empty report is generated
 
         self.result_area = QTextBrowser(self)
         self.result_area.setReadOnly(True)
@@ -133,6 +137,8 @@ class NmapScanner(QMainWindow):
         ip = scanner.all_hosts()[0]
         stats = scanner.scanstats()
         result = ScanResult(ip, stats, scanner[ip])
+        self.result_objects[ip] = result
+        self.create_report_button.setEnabled(True)
         # TODO: push result object to DB
 
         if self.nm_scan_error == True:
@@ -398,6 +404,7 @@ class NmapScanner(QMainWindow):
 
     def clear_results(self):
         self.result_area.clear()
+        self.result_objects.clear()
 
     def clear_dynamic_widgets(self):
         # Remove and delete each dynamically added widget
@@ -428,12 +435,14 @@ class NmapScanner(QMainWindow):
                         layout.removeWidget(widget)
                         widget.deleteLater()
 
+        self.result_objects.clear()
         self.layouts.clear()  # Clear the dictionary after removing the frames and layouts
 
     def reset_view(self):
         self.clear_dynamic_widgets()
         self.clear_results()
         self.ip_input.setText('')
+        self.create_report_button.setEnabled(False)  # disable the button so you cannot generate a blank report
 
     def on_scan_button_click(self, button, ip=None):
         self.disable_all_buttons()
@@ -498,4 +507,29 @@ class NmapScanner(QMainWindow):
             i=i+1
         for button in self.dynamic_buttons:
             button.setEnabled(True)
+
+        if len(self.result_objects) == 0:
+            self.create_report_button.setEnabled(False) # if there are no results, disable report creation
+
+    def create_report(self):
+        print(len(self.result_objects))
+
+        document = Document()
+
+        if len(self.result_objects) > 1: # if it's a network scan...
+
+            print('network scan')
+
+            for ip, result_object in self.result_objects.items():
+                print(ip)
+                print(result_object)
+
+        else:
+            print('single scan')
+
+            now = datetime.now()
+            title = str(list(self.result_objects.keys())[0]) + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
+            document.save(title)
+
+
 
