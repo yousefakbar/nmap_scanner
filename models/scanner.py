@@ -15,6 +15,9 @@ import platform
 from datetime import datetime
 from docx import Document
 
+def ReverseString(text):
+    return text[::-1]
+
 
 class NmapScanner(QMainWindow):
     def __init__(self):
@@ -517,18 +520,37 @@ class NmapScanner(QMainWindow):
         document = Document()
 
         if len(self.result_objects) > 1: # if it's a network scan...
-
             print('network scan')
+            r_ip_address = ReverseString(list(self.result_objects.keys())[0]) #reverses one of the IP addresses
+            x = r_ip_address.find('.') # finds the period
+            net_address = str(list(self.result_objects.keys())[0])[:-x-1] # net address is the ip address with the last set of numbers removed
+
+            document.add_heading('Network Scan on ' + net_address)
+
+            document.add_picture('CoD_Logo.png')
+
+            p1 = document.add_paragraph('Below is the list of IP addresses with open ports: \n')
 
             for ip, result_object in self.result_objects.items():
+                p1.add_run(ip + '\n')
                 print(ip)
-                print(result_object)
+            now = datetime.now()
+            title = net_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
+            document.save(title)
 
         else:
             print('single scan')
-
             now = datetime.now()
-            title = str(list(self.result_objects.keys())[0]) + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
+            ip_address = str(list(self.result_objects.keys())[0])
+            title = ip_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
+
+            document.add_heading('Single Scan on ' + ip_address )
+
+            document.add_picture('CoD_Logo.png')
+
+            p1 = document.add_paragraph('The IP address that was scanned is ' + ip_address)
+
+            p1.add_run('\n CVE info goes here if they get CVEs')
             document.save(title)
 
 
