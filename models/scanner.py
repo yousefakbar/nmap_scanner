@@ -539,7 +539,7 @@ class NmapScanner(QMainWindow):
 
             document.add_heading('Network Scan on ' + net_address)
 
-            document.add_picture('CoD_Logo.png')
+            document.add_picture(self.logo_png)
 
             p1 = document.add_paragraph('Below is the list of IP addresses with open ports: \n')
 
@@ -558,7 +558,7 @@ class NmapScanner(QMainWindow):
 
             document.add_heading('Single Scan on ' + ip_address )
 
-            document.add_picture('CoD_Logo.png')
+            document.add_picture(self.logo_png)
 
             p1 = document.add_paragraph('The IP address that was scanned is ' + ip_address)
 
