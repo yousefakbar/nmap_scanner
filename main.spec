@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('data/NMapScannerCSS.qss', '.'), ('data/CoD_Logo.ico', '.')],
+    datas=[('data/NMapScannerCSS.qss', '.'), ('data/CoD_Logo.ico', '.'), ('data/CoD_Logo.png', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
