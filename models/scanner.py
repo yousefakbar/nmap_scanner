@@ -129,7 +129,13 @@ class NmapScanner(QMainWindow):
         return await loop.run_in_executor(None, self.blocking_nmap_scan, scanner, ip, '-sC -sV')
 
     def display_results_perform_scan(self, scanner):
+        self.clear_results()
         self.enable_all_buttons()
+
+        if len(scanner.all_hosts()) == 0:
+            self.result_area.append('IP was not found or is down. Please try another IP')
+            return
+
         ip = scanner.all_hosts()[0]
         stats = scanner.scanstats()
         result = ScanResult(ip, stats, scanner[ip])
