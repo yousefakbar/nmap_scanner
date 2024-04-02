@@ -34,7 +34,21 @@ class NmapScanner(QMainWindow):
         self.dynamic_buttons = []
         self.nvdlib_error = False
         self.nm_scan_error = False
+        self.import_data_files()
         self.init_ui()
+
+
+    def import_data_files(self):
+        if getattr(sys, 'frozen', False):
+            application_path = sys._MEIPASS
+            self.logo_ico = os.path.join(application_path, 'CoD_Logo.ico')
+            self.logo_png = os.path.join(application_path, 'CoD_Logo.png')
+        else:
+            application_path = os.path.dirname(os.path.abspath(__file__))
+            projectRoot = os.path.normpath(os.path.join(application_path, '..'))
+            self.logo_ico = os.path.join(projectRoot, 'data/CoD_Logo.ico')
+            self.logo_png = os.path.join(projectRoot, 'data/CoD_Logo.png')
+
 
     def init_ui(self):
         self.setIconFile()
@@ -99,16 +113,8 @@ class NmapScanner(QMainWindow):
 
 
     def setIconFile(self):
-        if getattr(sys, 'frozen', False):
-            application_path = sys._MEIPASS
-            icoFile = os.path.join(application_path, 'CoD_Logo.ico')
-        else:
-            application_path = os.path.dirname(os.path.abspath(__file__))
-            projectRoot = os.path.normpath(os.path.join(application_path, '..'))
-            icoFile = os.path.join(projectRoot, 'data/CoD_Logo.ico')
-
         try:
-            self.setWindowIcon(QIcon(icoFile))
+            self.setWindowIcon(QIcon(self.logo_ico))
         except:
             print('There was an error setting the icon file')
 
