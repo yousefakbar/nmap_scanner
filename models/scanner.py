@@ -327,7 +327,11 @@ class NmapScanner(QMainWindow):
     async def scan_all_in_network(self):
         self.clear_dynamic_widgets()
         loop = asyncio.get_event_loop()
-        ip = self.get_local_ip()
+
+        if self.ip_input.text() == '':
+            ip = self.get_local_ip()
+        else:
+            ip = self.ip_input.text()
 
         if ip:  # Use the provided IP to determine the network range
             network = '.'.join(ip.split('.')[:3]) + '.0/24'  # Assumes a class C network
