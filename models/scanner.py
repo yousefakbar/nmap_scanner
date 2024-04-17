@@ -4,6 +4,7 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices, QIcon
 from PyQt5.QtCore import QRegExp, Qt
 from models.result import ScanResult
 from models.worker import Worker
+from models.hosts import Host
 import nmap
 import nvdlib
 import re
@@ -25,7 +26,7 @@ class NmapScanner(QMainWindow):
         self.layout = None
 
         self.api_key = '1f8da398-dc1d-4a00-be62-139a13cacda2'
-        self.hosts_list = []
+        self.hosts_list = Host()
         self.host_widgets = []  # List to keep track of dynamically added labels
         self.layouts = {}  # Dictionary to keep track of QFrames and their layouts
         self.active_threads = []  # List to keep track of active threads
@@ -155,6 +156,7 @@ class NmapScanner(QMainWindow):
         self.result_objects[ip] = result
         self.create_report_button.setEnabled(True)
         # TODO: push result object to DB
+        self.hosts_list.append_host(ip)
 
         if self.nm_scan_error == True:
             return
@@ -207,6 +209,8 @@ class NmapScanner(QMainWindow):
                 for port in lport:
                     numports = numports + 1
 
+                    self.hosts_list.append_port_to_host(host, port)
+
                     port_label = QLabel(self)
                     port_label.setText(
                         f'port: {port}\nstate:{scanner[host][proto][port]["state"]}\nservice: {scanner[host][proto][port]["name"]}\nversion: {scanner[host][proto][port]["version"]}')
@@ -234,6 +238,7 @@ class NmapScanner(QMainWindow):
         return await loop.run_in_executor(None, self.blocking_version_scan, scanner, ip, port, args)
 
     def display_results_version_scan(self, scanner):
+        print('I got the cves')
         self.enable_all_buttons()
 
         if self.nvdlib_error == True:
@@ -351,7 +356,7 @@ class NmapScanner(QMainWindow):
         self.result_area.append('List of hosts UP (%s/%s) in network \n' % (scan_stats['uphosts'], scan_stats['totalhosts']))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i += i
-            self.hosts_list.append(scanner[host])
+            self.hosts_list.append_host(scanner[host])
 
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'IP: {host}\nHostname: {scanner[host].hostname()}\n')
@@ -383,6 +388,7 @@ class NmapScanner(QMainWindow):
     def blocking_version_scan(self, scanner, ip, port, args):
         try:
             scanner.scan(ip, arguments=args)
+            print('Finished scanning')
         except:
             print('There was an error in the nmap version scan. Try again.')
             self.nm_scan_error = True
@@ -416,6 +422,7 @@ class NmapScanner(QMainWindow):
                 self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
                 self.version_res.append('Last Updated: ' + cve.lastModified)
                 self.version_res.append('')
+                # TODO: push cve information to the dict self.hosts_list
 
         self.test_ip = ip
         self.test_port = port
