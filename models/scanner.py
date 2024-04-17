@@ -209,7 +209,13 @@ class NmapScanner(QMainWindow):
                 for port in lport:
                     numports = numports + 1
 
-                    self.hosts_list.append_port_to_host(host, port)
+                    port_info = {
+                            'num': port,
+                            'service': scanner[host][proto][port]["name"],
+                            'product': scanner[ip]['tcp'][port]['product'],
+                            'version': scanner[host][proto][port]["version"]
+                            }
+                    self.hosts_list.append_port_to_host(host, port, port_info)
 
                     port_label = QLabel(self)
                     port_label.setText(
@@ -229,6 +235,9 @@ class NmapScanner(QMainWindow):
 
             self.result_area.append('---------------------')
 
+            # Delete this later
+            self.hosts_list.print_dict()
+
 
     async def perform_version_scan(self, ip, port):
         loop = asyncio.get_event_loop()
@@ -238,7 +247,6 @@ class NmapScanner(QMainWindow):
         return await loop.run_in_executor(None, self.blocking_version_scan, scanner, ip, port, args)
 
     def display_results_version_scan(self, scanner):
-        print('I got the cves')
         self.enable_all_buttons()
 
         if self.nvdlib_error == True:
@@ -283,6 +291,8 @@ class NmapScanner(QMainWindow):
 
         for line in self.version_res:
             self.portVulnTB.append(line)
+
+        self.hosts_list.print_dict()
 
     def get_ssh_version(self, version):
         if len(version) <= 3:
@@ -388,7 +398,6 @@ class NmapScanner(QMainWindow):
     def blocking_version_scan(self, scanner, ip, port, args):
         try:
             scanner.scan(ip, arguments=args)
-            print('Finished scanning')
         except:
             print('There was an error in the nmap version scan. Try again.')
             self.nm_scan_error = True
@@ -422,7 +431,15 @@ class NmapScanner(QMainWindow):
                 self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
                 self.version_res.append('Last Updated: ' + cve.lastModified)
                 self.version_res.append('')
+
                 # TODO: push cve information to the dict self.hosts_list
+                cve_info = {
+                        'id': cve.id,
+                        'severity': cve.score[2],
+                        'lastModified': cve.lastModified,
+                        'url': 'https://nvd.nist.gov/vuln/detail/' + cve.id
+                        }
+                self.hosts_list.append_cve_to_port(ip, port, cve.id, cve_info)
 
         self.test_ip = ip
         self.test_port = port

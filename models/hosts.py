@@ -28,18 +28,18 @@ class Host():
         self.hosts_list[ip] = {}
 
 
-    def append_port_to_host(self, ip, port):
+    def append_port_to_host(self, ip, port, info):
         if port in self.hosts_list[ip]:
             return False
 
-        self.hosts_list[ip][port] = {}
+        self.hosts_list[ip][port] = info
 
 
-    def append_cve_to_port(self, ip, port, cve):
+    def append_cve_to_port(self, ip, port, cve, info):
         if cve in self.hosts_list[ip][port]:
             return False
 
-        self.hosts_list[ip][port][cve] = {}
+        self.hosts_list[ip][port][cve] = info
 
 
     def print_dict(self):
