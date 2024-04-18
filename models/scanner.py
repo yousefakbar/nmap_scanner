@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QLineEdit, QGridLayout, QW
         QScrollArea, QFrame, QMessageBox
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices, QIcon
 from PyQt5.QtCore import QRegExp, Qt
-from models.result import ScanResult
 from models.worker import Worker
 from models.hosts import Host
 import nmap
@@ -152,8 +151,6 @@ class NmapScanner(QMainWindow):
 
         ip = scanner.all_hosts()[0]
         stats = scanner.scanstats()
-        result = ScanResult(ip, stats, scanner[ip])
-        self.result_objects[ip] = result
         self.create_report_button.setEnabled(True)
         # TODO: push result object to DB
         self.hosts_list.append_host(ip)
