@@ -153,7 +153,7 @@ class NmapScanner(QMainWindow):
         stats = scanner.scanstats()
         self.create_report_button.setEnabled(True)
         # TODO: push result object to DB
-        self.hosts_list.append_host(ip)
+        self.hosts_list.append_host(ip, scanner[ip].hostname())
 
         if self.nm_scan_error == True:
             return
@@ -207,9 +207,8 @@ class NmapScanner(QMainWindow):
                     numports = numports + 1
 
                     port_info = {
-                            'num': port,
-                            'service': scanner[host][proto][port]["name"],
                             'product': scanner[ip]['tcp'][port]['product'],
+                            'service': scanner[host][proto][port]["name"],
                             'version': scanner[host][proto][port]["version"]
                             }
                     self.hosts_list.append_port_to_host(host, port, port_info)
@@ -363,7 +362,7 @@ class NmapScanner(QMainWindow):
         self.result_area.append('List of hosts UP (%s/%s) in network \n' % (scan_stats['uphosts'], scan_stats['totalhosts']))
         for host in scanner.all_hosts():  # for each host found, create a qLabel and "more" button
             i += i
-            self.hosts_list.append_host(scanner[host])
+            self.hosts_list.append_host(host, scanner[host].hostname())
 
             self.hostLabel = QLabel(self)
             self.hostLabel.setText(f'IP: {host}\nHostname: {scanner[host].hostname()}\n')
@@ -431,10 +430,9 @@ class NmapScanner(QMainWindow):
 
                 # TODO: push cve information to the dict self.hosts_list
                 cve_info = {
-                        'id': cve.id,
-                        'severity': cve.score[2],
-                        'lastModified': cve.lastModified,
+                        'last_modified': cve.lastModified,
                         'url': 'https://nvd.nist.gov/vuln/detail/' + cve.id
+                        'severity': cve.score[2],
                         }
                 self.hosts_list.append_cve_to_port(ip, port, cve.id, cve_info)
 
