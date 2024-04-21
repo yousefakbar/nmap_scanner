@@ -431,7 +431,7 @@ class NmapScanner(QMainWindow):
                 # TODO: push cve information to the dict self.hosts_list
                 cve_info = {
                         'last_modified': cve.lastModified,
-                        'url': 'https://nvd.nist.gov/vuln/detail/' + cve.id
+                        'url': 'https://nvd.nist.gov/vuln/detail/' + cve.id,
                         'severity': cve.score[2],
                         }
                 self.hosts_list.append_cve_to_port(ip, port, cve.id, cve_info)
@@ -552,19 +552,17 @@ class NmapScanner(QMainWindow):
     def create_report(self):
         print(len(self.result_objects))
 
-        document = Document()
 
-        if len(self.result_objects) > 1: # if it's a network scan...
+
+        if len(self.hosts_list.hosts_list) > 1: # checks for network vs single scan
             print('network scan')
+            document = Document('NetworkScanTemplate')
             r_ip_address = ReverseString(list(self.result_objects.keys())[0]) #reverses one of the IP addresses
             x = r_ip_address.find('.') # finds the period
             net_address = str(list(self.result_objects.keys())[0])[:-x-1] # net address is the ip address with the last set of numbers removed
+            document.paragraphs[0].add_run(net_address)
+            document.paragraphs[1] = "The IP address of the network is " + net_address + "."
 
-            document.add_heading('Network Scan on ' + net_address)
-
-            document.add_picture(self.logo_png)
-
-            p1 = document.add_paragraph('Below is the list of IP addresses with open ports: \n')
 
             for ip, result_object in self.result_objects.items():
                 p1.add_run(ip + '\n')
