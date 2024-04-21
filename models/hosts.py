@@ -1,7 +1,12 @@
 # Host defines and organizes IP's, ports, and CVE's in a data structure that can
 # be instantiated, populated, modified, and retrieved from the NmapScanner for
 # debugging, logging, and creating the report in an efficient way
-import datetime import datetime
+
+import datetime
+from models.ip import IP
+from models.port import Port
+from models.cve import CVE
+
 
 class Host():
     # Structure of the Host dictionary:
@@ -20,7 +25,7 @@ class Host():
     hosts_list = {}
 
     def __init__(self):
-        date = datetime.now()
+        # date = datetime.now()
         # TODO: Add user tracking logic
         user_id = 0
 
@@ -38,14 +43,14 @@ class Host():
         if port in self.hosts_list[ip].ports:
             return False
 
-        self.hosts_list[ip][port] = Port(port, info['product'], info['service'], info['version'], {})
+        self.hosts_list[ip].ports[port] = Port(port, info['product'], info['service'], info['version'], {})
 
 
     def append_cve_to_port(self, ip, port, cve, info):
         if cve in self.hosts_list[ip].ports[port].cves:
             return False
 
-        self.hosts_list[ip][port][cve] = CVE(cve, info['last_modified'], info['url'], info['severity'])
+        self.hosts_list[ip].ports[port].cves    [cve] = CVE(cve, info['last_modified'], info['url'], info['severity'])
 
 
     def print_dict(self):
