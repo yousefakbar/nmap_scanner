@@ -144,6 +144,7 @@ class NmapScanner(QMainWindow):
     def display_results_perform_scan(self, scanner):
         self.clear_results()
         self.enable_all_buttons()
+        self.create_report_button.setEnabled(True)
 
         if len(scanner.all_hosts()) == 0:
             self.result_area.append('IP was not found or is down. Please try another IP')
@@ -244,6 +245,7 @@ class NmapScanner(QMainWindow):
 
     def display_results_version_scan(self, scanner):
         self.enable_all_buttons()
+        self.create_report_button.setEnabled(True)
 
         if self.nvdlib_error == True:
             print('There was an error in the nvdlib call')
@@ -356,6 +358,7 @@ class NmapScanner(QMainWindow):
         self.enable_all_buttons()
         self.result_area.clear()
         self.scanAllPressedButton.setEnabled(True)
+        self.create_report_button.setEnabled(True)
         i = 3  # Adjust if more fields are added above the results field
         scan_stats = scanner.scanstats()
         self.result_area.append('Network scan complete. Displaying hosts below.\n')
@@ -556,7 +559,7 @@ class NmapScanner(QMainWindow):
 
         if len(self.hosts_list.hosts_list) > 1: # checks for network vs single scan
             print('network scan')
-            document = Document('NetworkScanTemplate')
+            document = Document('NetworkScanTemplate.docx')
             r_ip_address = ReverseString(list(self.result_objects.keys())[0]) #reverses one of the IP addresses
             x = r_ip_address.find('.') # finds the period
             net_address = str(list(self.result_objects.keys())[0])[:-x-1] # net address is the ip address with the last set of numbers removed
@@ -564,26 +567,27 @@ class NmapScanner(QMainWindow):
             document.paragraphs[1] = "The IP address of the network is " + net_address + "."
 
 
-            for ip, result_object in self.result_objects.items():
-                p1.add_run(ip + '\n')
-                print(ip)
             now = datetime.now()
             title = net_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
             document.save(title)
 
         else:
             print('single scan')
+            document = Document('Single_Scan_Template.docx')
             now = datetime.now()
-            ip_address = str(list(self.result_objects.keys())[0])
+            ip_address = str(list(self.hosts_list.hosts_list.keys())[0])
             title = ip_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
 
-            document.add_heading('Single Scan on ' + ip_address )
+            document.paragraphs[0].add_run(ip_address)
+            text = "The IP address is " + ip_address + " "
+            if self.hosts_list.hosts_list[ip_address].hostname:
+                ip_hostname = self.hosts_list.hosts_list[ip_address].hostname
+                text = text + 'and the host name is ' + ip_hostname + '.'
+            else:
+                text = text + 'and no host name was found.'
 
-            document.add_picture(self.logo_png)
-
-            p1 = document.add_paragraph('The IP address that was scanned is ' + ip_address)
-
-            p1.add_run('\n CVE info goes here if they get CVEs')
+            p1 = document.add_paragraph()
+            p1.text = text
             document.save(title)
 
 
