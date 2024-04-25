@@ -34,8 +34,11 @@ class NmapScanner(QMainWindow):
         self.dynamic_buttons = []
         self.nvdlib_error = False
         self.nm_scan_error = False
+        self.ports_scanned = False
+        self.CVEs_checked = False
         self.import_data_files()
         self.init_ui()
+
 
 
     def import_data_files(self):
@@ -118,7 +121,7 @@ class NmapScanner(QMainWindow):
         except:
             print('There was an error setting the icon file')
 
-        
+
     def __check_nmap_installation(self, container):
         if self.is_nmap_installed() == False:
             reply = QMessageBox.question(container, 'Install nmap?', 'Nmap is required to run the program. Would you like to install nmap?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -129,7 +132,7 @@ class NmapScanner(QMainWindow):
             else:
                 self.install_nmap(container)
 
-        
+
     async def perform_scan(self, ip=None):
         loop = asyncio.get_event_loop()
         if not ip:
@@ -237,6 +240,8 @@ class NmapScanner(QMainWindow):
 
 
     async def perform_version_scan(self, ip, port):
+        if self.CVEs_checked == False:
+            self.CVEs_checked = True
         loop = asyncio.get_event_loop()
         args = '-sV -p ' + str(port)
         self.result_area.append("Scanning for CVE's on IP & port " + ip + ":" + str(port))
@@ -483,11 +488,15 @@ class NmapScanner(QMainWindow):
         self.clear_dynamic_widgets()
         self.clear_results()
         self.ip_input.setText('')
+        self.ports_scanned = False
+        self.CVEs_checked = False
         self.create_report_button.setEnabled(False)  # disable the button so you cannot generate a blank report
 
     def on_scan_button_click(self, button, ip=None):
         self.disable_all_buttons()
         self.scanPressedButton = self.sender()
+        if self.ports_scanned == False:
+            self.ports_scanned = True
 
         if ip: # This will run when the user clicks scan host after "Scanning all in network"
             self.start_async_task(self.perform_scan(ip), self.display_results_perform_scan)
@@ -557,38 +566,89 @@ class NmapScanner(QMainWindow):
 
 
 
-        if len(self.hosts_list.hosts_list) > 1: # checks for network vs single scan
-            print('network scan')
-            document = Document('NetworkScanTemplate.docx')
-            r_ip_address = ReverseString(list(self.result_objects.keys())[0]) #reverses one of the IP addresses
-            x = r_ip_address.find('.') # finds the period
-            net_address = str(list(self.result_objects.keys())[0])[:-x-1] # net address is the ip address with the last set of numbers removed
-            document.paragraphs[0].add_run(net_address)
-            document.paragraphs[1] = "The IP address of the network is " + net_address + "."
+        #print('network scan')
+        #document = Document('NetworkScanTemplate.docx')
+        #r_ip_address = ReverseString(list(self.result_objects.keys())[0]) #reverses one of the IP addresses
+        #x = r_ip_address.find('.') # finds the period
+        #net_address = str(list(self.result_objects.keys())[0])[:-x-1] # net address is the ip address with the last set of numbers removed
+        #document.paragraphs[0].add_run(net_address)
+        #document.paragraphs[1] = "The IP address of the network is " + net_address + "."
+        #now = datetime.now()
+        #title = net_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
+        #document.save(title)
 
 
-            now = datetime.now()
-            title = net_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
-            document.save(title)
+        print('Generating report')
+        document = Document('Single_Scan_Template.docx')
+        now = datetime.now()
+        ip_address = str(list(self.hosts_list.hosts_list.keys())[0])
+        title = ip_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
 
-        else:
-            print('single scan')
-            document = Document('Single_Scan_Template.docx')
-            now = datetime.now()
-            ip_address = str(list(self.hosts_list.hosts_list.keys())[0])
-            title = ip_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
+        document.paragraphs[0].add_run(ip_address) # adds to title
 
-            document.paragraphs[0].add_run(ip_address)
-            text = "The IP address is " + ip_address + " "
-            if self.hosts_list.hosts_list[ip_address].hostname:
-                ip_hostname = self.hosts_list.hosts_list[ip_address].hostname
-                text = text + 'and the host name is ' + ip_hostname + '.'
+
+        # t1 is the table of ips and host names
+        num_hosts = len(self.hosts_list.hosts_list)+1
+        t1 = document.add_table(rows=num_hosts, cols=2)
+
+
+        for x in range(num_hosts):
+            if x == 0:
+                t1.rows[x].cells[0].text = "IP Address"
+                t1.rows[x].cells[1].text = "Host name"
+
             else:
-                text = text + 'and no host name was found.'
+                ip_address = str(list(self.hosts_list.hosts_list.keys())[x-1])
+                ip_hostname = self.hosts_list.hosts_list[ip_address].hostname
+                t1.rows[x].cells[0].text = ip_address
+                t1.rows[x].cells[1].text = ip_hostname
 
-            p1 = document.add_paragraph()
-            p1.text = text
-            document.save(title)
+        if self.ports_scanned:
+            print('ports scanned')
+            document.add_paragraph().text = "\nScanned ports are below: \n"
+            # for each IP, make a table for its ports
 
+            for x in range(num_hosts-1):
+                ip_address = str(list(self.hosts_list.hosts_list.keys())[x])
+                num_ports = len(self.hosts_list.hosts_list[ip_address].ports)
+                print(num_ports)
+                if num_ports:
+                    t2 = document.add_table(rows=num_ports+1,cols=6)
+                    for i in range(num_ports+1):
+                        if i == 0:
+                            t2.rows[i].cells[0].text = "IP Address"
+                            t2.rows[i].cells[1].text = "Host name"
+                            t2.rows[i].cells[2].text = "Port number"
+                            t2.rows[i].cells[3].text = "Product"
+                            t2.rows[i].cells[4].text = "Service name"
+                            t2.rows[i].cells[5].text = "Service version"
+                        else:
+                            ip_address = str(list(self.hosts_list.hosts_list.keys())[x])
+                            temp_ip = self.hosts_list.hosts_list[ip_address]
+                            ip_hostname = temp_ip.hostname
+                            list_of_ports = list(temp_ip.ports.keys())
+                            #print(temp_ip.ports[list_of_ports[i-1]].product)
+                            t2.rows[i].cells[0].text = ip_address
+                            t2.rows[i].cells[1].text = ip_hostname
+                            t2.rows[i].cells[2].text = str(temp_ip.ports[list_of_ports[i-1]].port_number)
+                            t2.rows[i].cells[3].text = temp_ip.ports[list_of_ports[i-1]].product
+                            t2.rows[i].cells[4].text = temp_ip.ports[list_of_ports[i-1]].service_name
+                            t2.rows[i].cells[5].text = temp_ip.ports[list_of_ports[i-1]].service_version
+
+                else:
+                    document.add_paragraph().text = "No ports found in " + ip_address
+
+        if self.CVEs_checked:
+            for x in range(num_hosts-1):
+                ip_address = str(list(self.hosts_list.hosts_list.keys())[x])
+                num_ports = len(self.hosts_list.hosts_list[ip_address].ports)
+                temp_ip = self.hosts_list.hosts_list[ip_address]
+                list_of_ports = list(temp_ip.ports.keys())
+                for n in range(num_ports):
+
+                    document.add_paragraph(str(temp_ip.ports[list_of_ports[n-1]].port_number) + ":\n")
+
+
+        document.save(title)
 
 
