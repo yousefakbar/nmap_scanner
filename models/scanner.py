@@ -156,7 +156,7 @@ class NmapScanner(QMainWindow):
         ip = scanner.all_hosts()[0]
         stats = scanner.scanstats()
         self.create_report_button.setEnabled(True)
-        # TODO: push result object to DB
+
         self.hosts_list.append_host(ip, scanner[ip].hostname())
 
         if self.nm_scan_error == True:
@@ -236,7 +236,9 @@ class NmapScanner(QMainWindow):
             self.result_area.append('---------------------')
 
             # Delete this later
+            print("TEST")
             self.hosts_list.print_dict()
+            print("TEST2")
 
 
     async def perform_version_scan(self, ip, port):
@@ -295,7 +297,9 @@ class NmapScanner(QMainWindow):
         for line in self.version_res:
             self.portVulnTB.append(line)
 
+        print("test3")
         self.hosts_list.print_dict()
+        print("test4")
 
     def get_ssh_version(self, version):
         if len(version) <= 3:
@@ -562,24 +566,11 @@ class NmapScanner(QMainWindow):
             self.create_report_button.setEnabled(False) # if there are no results, disable report creation
 
     def create_report(self):
-        print(len(self.result_objects))
-
-
-
-        #print('network scan')
-        #document = Document('NetworkScanTemplate.docx')
-        #r_ip_address = ReverseString(list(self.result_objects.keys())[0]) #reverses one of the IP addresses
-        #x = r_ip_address.find('.') # finds the period
-        #net_address = str(list(self.result_objects.keys())[0])[:-x-1] # net address is the ip address with the last set of numbers removed
-        #document.paragraphs[0].add_run(net_address)
-        #document.paragraphs[1] = "The IP address of the network is " + net_address + "."
-        #now = datetime.now()
-        #title = net_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
-        #document.save(title)
-
 
         print('Generating report')
-        document = Document('Single_Scan_Template.docx')
+        document = Document('Single_Scan_Template.docx') # opens template
+
+        # Generates title for document
         now = datetime.now()
         ip_address = str(list(self.hosts_list.hosts_list.keys())[0])
         title = ip_address + '_' + now.strftime("%d.%m.%Y_%H.%M.%S") + '.docx'
@@ -593,11 +584,10 @@ class NmapScanner(QMainWindow):
 
 
         for x in range(num_hosts):
-            if x == 0:
+            if x == 0: # fills first row
                 t1.rows[x].cells[0].text = "IP Address"
                 t1.rows[x].cells[1].text = "Host name"
-
-            else:
+            else: # fills rest of the table
                 ip_address = str(list(self.hosts_list.hosts_list.keys())[x-1])
                 ip_hostname = self.hosts_list.hosts_list[ip_address].hostname
                 t1.rows[x].cells[0].text = ip_address
@@ -615,19 +605,18 @@ class NmapScanner(QMainWindow):
                 if num_ports:
                     t2 = document.add_table(rows=num_ports+1,cols=6)
                     for i in range(num_ports+1):
-                        if i == 0:
+                        if i == 0: # Fills first row in table
                             t2.rows[i].cells[0].text = "IP Address"
                             t2.rows[i].cells[1].text = "Host name"
                             t2.rows[i].cells[2].text = "Port number"
                             t2.rows[i].cells[3].text = "Product"
                             t2.rows[i].cells[4].text = "Service name"
                             t2.rows[i].cells[5].text = "Service version"
-                        else:
+                        else: # fills rest of table
                             ip_address = str(list(self.hosts_list.hosts_list.keys())[x])
                             temp_ip = self.hosts_list.hosts_list[ip_address]
                             ip_hostname = temp_ip.hostname
                             list_of_ports = list(temp_ip.ports.keys())
-                            #print(temp_ip.ports[list_of_ports[i-1]].product)
                             t2.rows[i].cells[0].text = ip_address
                             t2.rows[i].cells[1].text = ip_hostname
                             t2.rows[i].cells[2].text = str(temp_ip.ports[list_of_ports[i-1]].port_number)
@@ -644,9 +633,24 @@ class NmapScanner(QMainWindow):
                 num_ports = len(self.hosts_list.hosts_list[ip_address].ports)
                 temp_ip = self.hosts_list.hosts_list[ip_address]
                 list_of_ports = list(temp_ip.ports.keys())
-                for n in range(num_ports):
+                for p in range(num_ports):
+                    temp_port = temp_ip.ports[list_of_ports[p].port_number]
+                    document.add_paragraph('Port: ' + str(temp_port) + ":\n")
+                    num_cves = len(temp_ip.ports[list_of_ports[p]].port.cves)
 
-                    document.add_paragraph(str(temp_ip.ports[list_of_ports[n-1]].port_number) + ":\n")
+                    t3 = document.add_table(rows=num_cves+1,cols=4)
+                    for i in range(num_cves+1):
+                        if i == 0:
+                            t3.rows[i].cells[0].text = 'CVE'
+                            t3.rows[i].cells[1].text = 'Last modified'
+                            t3.rows[i].cells[2].text = 'URL'
+                            t3.rows[i].cells[3].text = 'Severity'
+                        else:
+                            list_of_cves = list(temp_port.cves.keys())
+                            t3.rows[i].cells[0].text = temp_port.port.cves[list_of_cves[i-1]].name
+                            t3.rows[i].cells[1].text = temp_port.port.cves[list_of_cves[i-1]].last_modified
+                            t3.rows[i].cells[2].text = temp_port.port.cves[list_of_cves[i - 1]].url
+                            t3.rows[i].cells[3].text = temp_port.port.cves[list_of_cves[i - 1]].severity
 
 
         document.save(title)
