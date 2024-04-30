@@ -632,7 +632,7 @@ class NmapScanner(QMainWindow):
                 ip_address = str(list(self.hosts_list.hosts_list.keys())[x])
                 num_ports = len(self.hosts_list.hosts_list[ip_address].ports)
                 temp_ip = self.hosts_list.hosts_list[ip_address]
-                list_of_ports = list(temp_ip.ports.keys())
+                list_of_ports = list(temp_ip.ports.values())
                 for p in range(num_ports):
                     temp_port = temp_ip.ports[list_of_ports[p].port_number]
                     document.add_paragraph('Port: ' + str(temp_port) + ":\n")
