@@ -4,8 +4,8 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices, QIcon
 from PyQt5.QtCore import QRegExp, Qt
 from models.worker import Worker
 from models.hosts import Host
+from pymongo import MongoClient
 import nmap
-import nvdlib
 import re
 import asyncio
 import subprocess
@@ -419,34 +419,44 @@ class NmapScanner(QMainWindow):
         else:
             version = scanner[ip]['tcp'][port]['version']
 
-        q = service + ' ' + version
-
         try:
-            cpe_list = nvdlib.searchCPE(keywordSearch=q, key=self.api_key, delay=1)
+            client = MongoClient() # TODO modify based on server DB credentials
+            db = client.cvedb
+            cpes = db.cpe
+            query_cpe = { 'product': service.lower(), 'version': version}
+            results = cpes.find(query_cpe)
+            cpe_list = []
+            for cpe in results:
+                cpe_list.append(cpe)
+            cpe_name = cpe_list[0]['cpeName']
+            print('cpe name: ' + cpe_name)
+            print('service: ' + service.lower())
+            print('version: ' + version)
         except:
+            print('error searching cpe')
             self.nvdlib_error = True
             return scanner
 
-        for cpe in cpe_list:
-            try:
-                cve_res = nvdlib.searchCVE(cpe.cpeName, key=self.api_key, delay=1)
-            except:
-                self.nvdlib_error = True
-                return scanner
-
-            for cve in cve_res:
-                self.version_res.append('Severity: ' + cve.score[2])
-                self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + cve.id + '">' + cve.id + '</a>')
-                self.version_res.append('Last Updated: ' + cve.lastModified)
+        try:
+            client = MongoClient()
+            db = client.cvedb
+            cves = db.cves
+            query_cve = { 'vulnerable_configuration': cpe_name }
+            results = cves.find(query_cve)
+            for cve in results:
+                self.version_res.append('Severity: ' + str(cve['cvss3']))
+                self.version_res.append('<a href="https://nvd.nist.gov/vuln/detail/' + str(cve['id']) + '">' + str(cve['id']) + '</a>')
+                self.version_res.append('Last Updated: ' + str(cve['lastModified']))
                 self.version_res.append('')
-
-                # TODO: push cve information to the dict self.hosts_list
                 cve_info = {
-                        'last_modified': cve.lastModified,
-                        'url': 'https://nvd.nist.gov/vuln/detail/' + cve.id,
-                        'severity': cve.score[2],
+                        'last_modified': cve['lastModified'],
+                        'url': 'https://nvd.nist.gov/vuln/detail/' + cve['id'],
+                        'severity': cve['cvss3'],
                         }
-                self.hosts_list.append_cve_to_port(ip, port, cve.id, cve_info)
+                self.hosts_list.append_cve_to_port(ip, port, cve['id'], cve_info)
+        except:
+            self.nvdlib_error = True
+            return scanner
 
         self.test_ip = ip
         self.test_port = port
