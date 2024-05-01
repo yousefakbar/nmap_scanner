@@ -241,14 +241,13 @@ class NmapScanner(QMainWindow):
             print("TEST2")
 
 
-    async def perform_version_scan(self, ip, port):
+    def perform_version_scan(self, ip, port):
         if self.CVEs_checked == False:
             self.CVEs_checked = True
-        loop = asyncio.get_event_loop()
         args = '-sV -p ' + str(port)
         self.result_area.append("Scanning for CVE's on IP & port " + ip + ":" + str(port))
         scanner = nmap.PortScanner()
-        return await loop.run_in_executor(None, self.blocking_version_scan, scanner, ip, port, args)
+        return self.blocking_version_scan(scanner, ip, port, args)
 
     def display_results_version_scan(self, scanner):
         self.enable_all_buttons()
@@ -535,7 +534,9 @@ class NmapScanner(QMainWindow):
 
         self.versionScanPressedButton = self.sender()
         self.versionScanPressedButton.setEnabled(False)
-        self.start_async_task(self.perform_version_scan(ip, port), self.display_results_version_scan) # TODO
+        scanner = self.perform_version_scan(ip, port)
+        self.display_results_version_scan(scanner)
+
 
     def start_async_task(self, coroutine, callback):
         task = Worker(coroutine)
