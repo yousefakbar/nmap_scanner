@@ -306,7 +306,7 @@ class NmapScanner(QMainWindow):
         ssh_version = version[:version.index(' ')]
         match = re.search('[a-zA-Z]', ssh_version)
         match_idx = match.start()
-        return ssh_version[:match_idx] + ' ' + ssh_version[match_idx:]
+        return ssh_version[:match_idx] + '.' + ssh_version[match_idx:]
 
     def get_local_ip(self):
         os_type = platform.system()
